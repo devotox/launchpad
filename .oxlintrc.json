@@ -1,0 +1,33 @@
+{
+  "rules": {
+    "react": "all",
+    "typescript": "all",
+    "import": "all",
+    "jsx-a11y": "all",
+    "nextjs": "all"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2022": true
+  },
+  "globals": {
+    "React": "readonly"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "ignore_patterns": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    ".turbo/**",
+    "coverage/**",
+    "*.min.js",
+    "pnpm-lock.yaml",
+    "**/generated/**"
+  ]
+}

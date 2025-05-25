@@ -1,0 +1,59 @@
+{
+  "name": "@loveholidays/launchpad",
+  "version": "1.0.0",
+  "description": "The essential developer onboarding tool for LoveHolidays",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "lint:biome": "biome lint .",
+    "lint:biome:fix": "biome lint --write .",
+    "lint:oxlint": "oxlint .",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format:biome": "biome format .",
+    "format:biome:write": "biome format --write .",
+    "check": "biome check .",
+    "check:write": "biome check --write .",
+    "test": "turbo test",
+    "clean": "turbo clean",
+    "type-check": "turbo type-check",
+    "dev:cli": "tsx --tsconfig apps/cli/tsconfig.json --watch apps/cli/src/bin/launchpad.ts",
+    "start:cli": "tsx --tsconfig apps/cli/tsconfig.json apps/cli/src/bin/launchpad.ts",
+    "cli": "tsx --tsconfig apps/cli/tsconfig.json apps/cli/src/bin/launchpad.ts",
+    "cli:build": "turbo build --filter=@loveholidays/launchpad-cli",
+    "cli:dev": "pnpm --filter=@loveholidays/launchpad-cli dev",
+    "cli:built": "node apps/cli/dist/bin/launchpad.js",
+    "app:dev": "pnpm cli app dev --all",
+    "app:start": "pnpm cli app start --all",
+    "app:build": "pnpm cli app build --all",
+    "app:test": "pnpm cli app test --all",
+    "app:status": "pnpm cli app status",
+    "app:stop": "pnpm cli app stop --all",
+    "app:down": "pnpm cli app down --all",
+    "app:kill": "pnpm cli app kill"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@swc/core": "1.11.29",
+    "@total-typescript/ts-reset": "0.6.1",
+    "@turbo/gen": "2.5.3",
+    "oxlint": "0.16.12",
+    "prettier": "3.5.3",
+    "tsup": "8.5.0",
+    "tsx": "4.19.4",
+    "turbo": "2.5.3",
+    "typescript": "5.8.3",
+    "zx": "8.5.4"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "volta": {
+    "node": "22.16.0"
+  }
+}
