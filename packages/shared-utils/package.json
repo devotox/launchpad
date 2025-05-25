@@ -1,0 +1,28 @@
+{
+  "name": "@launchpad/shared-utils",
+  "version": "1.0.0",
+  "description": "Shared utilities for LoveHolidays Launchpad",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "biome lint src",
+    "test": "jest",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "typescript": "5.8.3",
+    "eslint": "9.27.0",
+    "jest": "29.7.0",
+    "@types/jest": "29.5.14",
+    "tsup": "8.5.0"
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
