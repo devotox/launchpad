@@ -43,9 +43,9 @@ export class RepositoryManager {
     try {
       const entries = await fs.readdir(this.workspacePath, { withFileTypes: true });
       const directories = entries
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name)
-        .filter(name => !name.startsWith('.') && name !== 'node_modules');
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .filter((name) => !name.startsWith('.') && name !== 'node_modules');
 
       // Filter to only include directories that look like repositories
       const repositories: string[] = [];
@@ -100,7 +100,10 @@ export class RepositoryManager {
       const packageJsonPath = join(repoPath, 'package.json');
       try {
         const packageContent = await fs.readFile(packageJsonPath, 'utf-8');
-        const packageJson = JSON.parse(packageContent) as { description?: string; version?: string };
+        const packageJson = JSON.parse(packageContent) as {
+          description?: string;
+          version?: string;
+        };
 
         if (packageJson.description) {
           console.log(chalk.gray(`   ${packageJson.description}`));
@@ -114,7 +117,11 @@ export class RepositoryManager {
         console.log(chalk.gray('   (No package.json found)'));
       }
     } catch (error) {
-      console.log(chalk.gray(`   Error reading repository info: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.gray(
+          `   Error reading repository info: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
     }
   }
 
@@ -133,15 +140,22 @@ export class RepositoryManager {
       // Check for available scripts
       const scripts = await this.getAvailableScripts(repoPath);
       if (scripts.length > 0) {
-        console.log(chalk.gray(`   📜 Scripts: ${scripts.slice(0, 5).join(', ')}${scripts.length > 5 ? '...' : ''}`));
+        console.log(
+          chalk.gray(
+            `   📜 Scripts: ${scripts.slice(0, 5).join(', ')}${scripts.length > 5 ? '...' : ''}`
+          )
+        );
       }
 
       // Show directory size
       const size = await this.getDirectorySize(repoPath);
       console.log(chalk.gray(`   📊 Size: ${this.formatSize(size)}`));
-
     } catch (error) {
-      console.log(chalk.gray(`   Error reading detailed info: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.gray(
+          `   Error reading detailed info: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
     }
   }
 

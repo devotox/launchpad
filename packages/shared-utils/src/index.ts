@@ -1,4 +1,5 @@
-export const formatProjectName = (name: string): string => name
+export const formatProjectName = (name: string): string =>
+  name
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
@@ -10,11 +11,11 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const createProjectStructure = () => ({
-    src: {
-      components: {},
-      utils: {},
-      types: {}
-    },
-    tests: {},
-    docs: {}
-  });
+  src: {
+    components: {},
+    utils: {},
+    types: {}
+  },
+  tests: {},
+  docs: {}
+});

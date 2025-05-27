@@ -7,8 +7,7 @@ import { DataManager } from '@/utils/config';
 
 export class DocsCommand {
   getCommand(): Command {
-    const docsCmd = new Command('docs')
-      .description('Manage global onboarding documentation');
+    const docsCmd = new Command('docs').description('Manage global onboarding documentation');
 
     docsCmd
       .command('list')
@@ -25,10 +24,9 @@ export class DocsCommand {
       });
 
     // Interactive management mode
-    docsCmd
-      .action(async () => {
-        await this.manageDocs();
-      });
+    docsCmd.action(async () => {
+      await this.manageDocs();
+    });
 
     return docsCmd;
   }

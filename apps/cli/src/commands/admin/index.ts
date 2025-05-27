@@ -8,8 +8,9 @@ import { TeamsCommand } from './teams';
 
 export class AdminCommand {
   getCommand(): Command {
-    const adminCmd = new Command('admin')
-      .description('Administrative commands for managing teams and configuration');
+    const adminCmd = new Command('admin').description(
+      'Administrative commands for managing teams and configuration'
+    );
 
     // Add sub-command handlers
     const teamsCommand = new TeamsCommand();

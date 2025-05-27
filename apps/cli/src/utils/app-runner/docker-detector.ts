@@ -74,13 +74,9 @@ export class DockerDetector {
   }
 
   private scriptUsesDockerCompose(script: string): boolean {
-    const dockerComposePatterns = [
-      /docker-compose/,
-      /docker compose/,
-      /compose/
-    ];
+    const dockerComposePatterns = [/docker-compose/, /docker compose/, /compose/];
 
-    return dockerComposePatterns.some(pattern => pattern.test(script));
+    return dockerComposePatterns.some((pattern) => pattern.test(script));
   }
 
   private parseDockerComposeScript(script: string): {
@@ -93,16 +89,13 @@ export class DockerDetector {
 
     // Extract services if specified (services are usually at the end)
     const parts = script.split(/\s+/);
-    const upIndex = parts.findIndex(part => part === 'up');
+    const upIndex = parts.findIndex((part) => part === 'up');
 
     if (upIndex !== -1) {
       // Services are typically after 'up' and any flags
       const afterUp = parts.slice(upIndex + 1);
-      const services = afterUp.filter(part =>
-        !part.startsWith('-') &&
-        part !== 'up' &&
-        part !== 'down' &&
-        part !== 'build'
+      const services = afterUp.filter(
+        (part) => !part.startsWith('-') && part !== 'up' && part !== 'down' && part !== 'build'
       );
 
       return {

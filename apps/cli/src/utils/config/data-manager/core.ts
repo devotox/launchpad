@@ -79,7 +79,7 @@ export class CoreDataManager {
 
   async getValidTeamIds(): Promise<string[]> {
     const teams = await this.getTeams();
-    return teams.map(team => team.id);
+    return teams.map((team) => team.id);
   }
 
   // Setup components operations
@@ -98,20 +98,24 @@ export class CoreDataManager {
     return components.find((component) => component.id === id);
   }
 
-  async getSetupComponentsByPlatform(platform: 'macos' | 'windows' | 'linux'): Promise<SetupComponent[]> {
+  async getSetupComponentsByPlatform(
+    platform: 'macos' | 'windows' | 'linux'
+  ): Promise<SetupComponent[]> {
     const components = await this.getSetupComponents();
     return components.filter((component) => component.platforms.includes(platform));
   }
 
-  async groupSetupComponentsByCategory(components?: SetupComponent[]): Promise<Record<string, SetupComponent[]>> {
-    const allComponents = components || await this.getSetupComponents();
+  async groupSetupComponentsByCategory(
+    components?: SetupComponent[]
+  ): Promise<Record<string, SetupComponent[]>> {
+    const allComponents = components || (await this.getSetupComponents());
     const grouped: Record<string, SetupComponent[]> = {};
 
     for (const component of allComponents) {
       if (!grouped[component.category]) {
         grouped[component.category] = [];
       }
-      grouped[component.category]!.push(component);
+      grouped[component.category]?.push(component);
     }
 
     return grouped;

@@ -13,26 +13,27 @@ type AppCommandOptions = {
   watch?: boolean;
   fix?: boolean;
   volumes?: boolean;
-}
+};
 
 type StopOptions = {
   repos?: string[];
   all?: boolean;
-}
+};
 
 type LogsOptions = {
   repo?: string;
   follow?: boolean;
-}
+};
 
 type KillOptions = {
   force?: boolean;
-}
+};
 
 export class AppCommand {
   getCommand(): Command {
-    const appCmd = new Command('app')
-      .description('Manage and run applications across repositories');
+    const appCmd = new Command('app').description(
+      'Manage and run applications across repositories'
+    );
 
     // Run commands
     appCmd
@@ -195,7 +196,7 @@ export class AppCommand {
         type: 'checkbox',
         name: 'selectedRepos',
         message: `Select repositories to run '${command}' on:`,
-        choices: config.workspace.repositories.map(repo => ({
+        choices: config.workspace.repositories.map((repo) => ({
           name: repo,
           value: repo,
           checked: false
@@ -256,7 +257,7 @@ export class AppCommand {
         type: 'checkbox',
         name: 'selectedProcesses',
         message: 'Select processes to stop:',
-        choices: runningProcesses.map(proc => ({
+        choices: runningProcesses.map((proc) => ({
           name: `${proc.repo} (${proc.command}) - PID: ${proc.pid}`,
           value: proc.repo
         }))
@@ -307,7 +308,7 @@ export class AppCommand {
         type: 'list',
         name: 'selectedRepo',
         message: 'Select repository to view logs:',
-        choices: runningProcesses.map(proc => ({
+        choices: runningProcesses.map((proc) => ({
           name: `${proc.repo} (${proc.command})`,
           value: proc.repo
         }))

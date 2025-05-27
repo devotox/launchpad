@@ -28,11 +28,16 @@ export class SyncHandler {
       let configToUse = { ...options };
 
       // If no specific options provided, try to use stored sync config
-      if ((providerToUse === 'github' && !options.repository) || (providerToUse === 'gist' && !options.gistId) || providerToUse === 'gist') {
+      if (
+        (providerToUse === 'github' && !options.repository) ||
+        (providerToUse === 'gist' && !options.gistId) ||
+        providerToUse === 'gist'
+      ) {
         const syncConfig = await this.configManager.getSyncConfig();
         if (syncConfig) {
           providerToUse = syncConfig.defaultProvider;
-          const providerConfig = syncConfig.providers[providerToUse as keyof typeof syncConfig.providers];
+          const providerConfig =
+            syncConfig.providers[providerToUse as keyof typeof syncConfig.providers];
 
           if (providerToUse === 'github' && providerConfig) {
             const githubConfig = providerConfig as SyncConfig['providers']['github'];
@@ -88,7 +93,9 @@ export class SyncHandler {
         if (!configToUse.gistId) {
           console.log(chalk.red('❌ No GitHub Gist configured'));
           console.log(chalk.gray('To download from a specific gist: --gist-id abc123def456'));
-          console.log(chalk.gray('To configure a default gist: launchpad admin config providers:add'));
+          console.log(
+            chalk.gray('To configure a default gist: launchpad admin config providers:add')
+          );
           console.log(chalk.gray('To upload and create a new gist: launchpad admin config upload'));
           return;
         }
@@ -200,11 +207,16 @@ export class SyncHandler {
       let configToUse = { ...options };
 
       // If no specific options provided, try to use stored sync config
-      if ((providerToUse === 'github' && !options.repository) || (providerToUse === 'gist' && !options.gistId) || providerToUse === 'gist') {
+      if (
+        (providerToUse === 'github' && !options.repository) ||
+        (providerToUse === 'gist' && !options.gistId) ||
+        providerToUse === 'gist'
+      ) {
         const syncConfig = await this.configManager.getSyncConfig();
         if (syncConfig) {
           providerToUse = syncConfig.defaultProvider;
-          const providerConfig = syncConfig.providers[providerToUse as keyof typeof syncConfig.providers];
+          const providerConfig =
+            syncConfig.providers[providerToUse as keyof typeof syncConfig.providers];
 
           if (providerToUse === 'github' && providerConfig) {
             const githubConfig = providerConfig as SyncConfig['providers']['github'];
@@ -270,11 +282,13 @@ export class SyncHandler {
           console.log(chalk.red('❌ GitHub token is required for Gist uploads'));
           console.log(chalk.gray('Create a token at: https://github.com/settings/tokens'));
           console.log(chalk.gray('Then use: --token YOUR_TOKEN'));
-          console.log(chalk.gray('Or configure it permanently: launchpad admin config providers:add'));
+          console.log(
+            chalk.gray('Or configure it permanently: launchpad admin config providers:add')
+          );
           return;
         }
 
-                // Check if we have stored gist config
+        // Check if we have stored gist config
         const syncConfig = await this.configManager.getSyncConfig();
         const hasStoredGistConfig = syncConfig?.providers.gist?.gistId;
 
@@ -393,6 +407,8 @@ export class SyncHandler {
     console.log(chalk.green('✅ Sync configuration created successfully!'));
     console.log(chalk.gray(`Default provider: ${answers.defaultProvider}`));
     console.log(chalk.gray(`Auto sync: ${answers.autoSync ? 'Enabled' : 'Disabled'}`));
-    console.log(chalk.cyan("\n💡 Next: Configure your provider with 'launchpad admin config providers:add'"));
+    console.log(
+      chalk.cyan("\n💡 Next: Configure your provider with 'launchpad admin config providers:add'")
+    );
   }
 }

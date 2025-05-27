@@ -10,7 +10,11 @@ import type { ConfigBundle, BackupData } from '@/utils/config/types';
 export class RestoreHandler {
   private dataManager = DataManager.getInstance();
 
-  async restoreConfig(options: { type?: string; input?: string; noBackup?: boolean }): Promise<void> {
+  async restoreConfig(options: {
+    type?: string;
+    input?: string;
+    noBackup?: boolean;
+  }): Promise<void> {
     try {
       if (!options.input) {
         console.log(chalk.red('❌ Input file path is required'));
@@ -29,7 +33,14 @@ export class RestoreHandler {
         if ('configType' in backupData && backupData.configType) {
           configType = backupData.configType;
           console.log(chalk.gray(`Auto-detected config type: ${configType}`));
-        } else if ('teams' in backupData && backupData.teams && 'setupComponents' in backupData && backupData.setupComponents && 'globalDocs' in backupData && backupData.globalDocs) {
+        } else if (
+          'teams' in backupData &&
+          backupData.teams &&
+          'setupComponents' in backupData &&
+          backupData.setupComponents &&
+          'globalDocs' in backupData &&
+          backupData.globalDocs
+        ) {
           configType = 'all';
           console.log(chalk.gray('Auto-detected config type: full bundle'));
         } else {
@@ -40,7 +51,11 @@ export class RestoreHandler {
 
       if (configType === 'all') {
         // Restore full bundle
-        if ('teams' in backupData && 'setupComponents' in backupData && 'globalDocs' in backupData) {
+        if (
+          'teams' in backupData &&
+          'setupComponents' in backupData &&
+          'globalDocs' in backupData
+        ) {
           const bundleData = backupData;
           console.log(chalk.yellow('⚠️  This will replace your current configuration.'));
           console.log(chalk.gray(`Bundle version: ${bundleData.version}`));
@@ -72,14 +87,22 @@ export class RestoreHandler {
         // Restore selective config
         const validTypes = ['teams', 'setup-components', 'global-docs'];
         if (!configType || !validTypes.includes(configType)) {
-          console.log(chalk.red(`❌ Invalid config type. Must be one of: ${validTypes.join(', ')}`));
+          console.log(
+            chalk.red(`❌ Invalid config type. Must be one of: ${validTypes.join(', ')}`)
+          );
           return;
         }
 
         if ('data' in backupData && backupData.data) {
-          console.log(chalk.yellow(`⚠️  This will replace your current ${configType} configuration.`));
+          console.log(
+            chalk.yellow(`⚠️  This will replace your current ${configType} configuration.`)
+          );
           console.log(chalk.gray(`Backup timestamp: ${backupData.timestamp}`));
-          console.log(chalk.gray(`Items: ${Array.isArray(backupData.data) ? backupData.data.length : 'Unknown'}`));
+          console.log(
+            chalk.gray(
+              `Items: ${Array.isArray(backupData.data) ? backupData.data.length : 'Unknown'}`
+            )
+          );
         } else {
           console.log(chalk.red('❌ Invalid backup data format'));
           return;
@@ -118,8 +141,8 @@ export class RestoreHandler {
 
     // List available backups
     const backups = await this.dataManager.listBackups();
-    const selectiveBackups = backups.filter(backup =>
-      backup.type !== 'full-bundle' && backup.type !== 'unknown'
+    const selectiveBackups = backups.filter(
+      (backup) => backup.type !== 'full-bundle' && backup.type !== 'unknown'
     );
 
     if (selectiveBackups.length === 0) {
@@ -133,7 +156,7 @@ export class RestoreHandler {
         type: 'list',
         name: 'selectedBackup',
         message: 'Select backup file to restore:',
-        choices: selectiveBackups.map(backup => ({
+        choices: selectiveBackups.map((backup) => ({
           name: `${backup.type} - ${new Date(backup.timestamp).toLocaleString()} (${(backup.size / 1024).toFixed(1)}KB)`,
           value: backup.path
         }))

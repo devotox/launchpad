@@ -1,10 +1,10 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ["src/index.ts"],
-  format: ["cjs", "esm"],
-  target: "node18",
-  outDir: "dist",
+  entry: ['src/index.ts'],
+  format: ['cjs', 'esm'],
+  target: 'node18',
+  outDir: 'dist',
   clean: true,
   dts: true,
   sourcemap: true,
@@ -12,5 +12,5 @@ export default defineConfig({
   bundle: true,
   minify: false,
   treeshake: true,
-  tsconfig: "tsconfig.build.json",
+  tsconfig: 'tsconfig.build.json'
 });

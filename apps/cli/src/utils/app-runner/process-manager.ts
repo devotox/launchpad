@@ -27,7 +27,9 @@ export class ProcessManager {
       console.log(chalk.green(`\n✅ All repositories completed '${command}' successfully!`));
     } catch (error) {
       console.log(chalk.red(`\n❌ Some repositories failed to complete '${command}'`));
-      console.log(chalk.gray(`Error details: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.gray(`Error details: ${error instanceof Error ? error.message : String(error)}`)
+      );
     }
   }
 
@@ -36,7 +38,11 @@ export class ProcessManager {
     runFunc: (repo: string) => Promise<void>,
     command: string
   ): Promise<void> {
-    console.log(chalk.cyan(`\n🔄 Running '${command}' sequentially on ${repositories.length} repositories...\n`));
+    console.log(
+      chalk.cyan(
+        `\n🔄 Running '${command}' sequentially on ${repositories.length} repositories...\n`
+      )
+    );
 
     for (const repo of repositories) {
       try {
@@ -66,11 +72,19 @@ export class ProcessManager {
       console.log(chalk.gray(`   🐳 Docker Compose detected: ${dockerInfo.composeFile}`));
     }
     if (npmDockerInfo.usesDocker) {
-      console.log(chalk.gray(`   🐳 NPM script uses Docker Compose: ${npmDockerInfo.dockerCommand}`));
+      console.log(
+        chalk.gray(`   🐳 NPM script uses Docker Compose: ${npmDockerInfo.dockerCommand}`)
+      );
     }
 
     return new Promise((resolve, reject) => {
-      const childProcess = spawn(actualCommand[0]!, actualCommand.slice(1), {
+      const command = actualCommand[0];
+      if (!command) {
+        reject(new Error('No command specified'));
+        return;
+      }
+
+      const childProcess = spawn(command, actualCommand.slice(1), {
         cwd: repoPath,
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: true
@@ -173,15 +187,16 @@ export class ProcessManager {
 
     console.log(chalk.cyan(`\n🛑 Stopping ${processes.length} running process(es)...\n`));
 
-    const stopPromises = processes.map(async proc => this.stopProcess(proc));
+    const stopPromises = processes.map(async (proc) => this.stopProcess(proc));
     await Promise.allSettled(stopPromises);
 
     console.log(chalk.green('✅ All processes stopped.'));
   }
 
   async stopRepositories(repositories: string[]): Promise<void> {
-    const processes = Array.from(this.runningProcesses.values())
-      .filter(proc => repositories.includes(proc.repo));
+    const processes = Array.from(this.runningProcesses.values()).filter((proc) =>
+      repositories.includes(proc.repo)
+    );
 
     if (processes.length === 0) {
       console.log(chalk.yellow('No matching running processes to stop.'));
@@ -190,7 +205,7 @@ export class ProcessManager {
 
     console.log(chalk.cyan(`\n🛑 Stopping ${processes.length} process(es)...\n`));
 
-    const stopPromises = processes.map(async proc => this.stopProcess(proc));
+    const stopPromises = processes.map(async (proc) => this.stopProcess(proc));
     await Promise.allSettled(stopPromises);
 
     console.log(chalk.green('✅ Selected processes stopped.'));
@@ -204,7 +219,11 @@ export class ProcessManager {
         await this.stopRegularProcess(proc);
       }
     } catch (error) {
-      console.log(chalk.red(`❌ Failed to stop ${proc.repo}: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `❌ Failed to stop ${proc.repo}: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
     }
   }
 
@@ -281,12 +300,16 @@ export class ProcessManager {
       return;
     }
 
-    console.log(chalk.red(`\n💀 ${force ? 'Force ' : ''}Killing ${processes.length} running process(es)...\n`));
+    console.log(
+      chalk.red(`\n💀 ${force ? 'Force ' : ''}Killing ${processes.length} running process(es)...\n`)
+    );
 
     for (const proc of processes) {
       try {
         const signal = force ? 'SIGKILL' : 'SIGTERM';
-        console.log(chalk.red(`💀 ${proc.repo}: Killing process (PID: ${proc.pid}) with ${signal}...`));
+        console.log(
+          chalk.red(`💀 ${proc.repo}: Killing process (PID: ${proc.pid}) with ${signal}...`)
+        );
 
         if (!proc.process.killed) {
           proc.process.kill(signal);
@@ -297,7 +320,11 @@ export class ProcessManager {
 
         console.log(chalk.green(`✅ ${proc.repo}: Process killed`));
       } catch (error) {
-        console.log(chalk.red(`❌ Failed to kill ${proc.repo}: ${error instanceof Error ? error.message : String(error)}`));
+        console.log(
+          chalk.red(
+            `❌ Failed to kill ${proc.repo}: ${error instanceof Error ? error.message : String(error)}`
+          )
+        );
       }
     }
 

@@ -19,6 +19,9 @@
     "lint:oxlint": {
       "cache": false
     },
+    "lint:eslint": {
+      "cache": false
+    },
     "format:biome": {
       "cache": false
     },

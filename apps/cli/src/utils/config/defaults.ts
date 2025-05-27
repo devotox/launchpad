@@ -6,11 +6,14 @@ import { DataManager } from '@/utils/config/data-manager';
 import type { Team } from '@/utils/config/data';
 import type { LaunchpadConfig } from '@/utils/config/types';
 
-export async function createDefaultConfig(user: {
-  name: string;
-  email: string;
-  team: string;
-}, workspaceName?: string): Promise<LaunchpadConfig> {
+export async function createDefaultConfig(
+  user: {
+    name: string;
+    email: string;
+    team: string;
+  },
+  workspaceName?: string
+): Promise<LaunchpadConfig> {
   // Use provided workspace name or extract from email domain
   let finalWorkspaceName: string;
 
@@ -19,7 +22,7 @@ export async function createDefaultConfig(user: {
   } else {
     const emailParts = user.email.split('@');
     const emailDomain = emailParts.length > 1 ? emailParts[1] : null;
-    finalWorkspaceName = emailDomain ? (emailDomain.split('.')[0] || 'workspace') : 'workspace';
+    finalWorkspaceName = emailDomain ? emailDomain.split('.')[0] || 'workspace' : 'workspace';
   }
 
   // Try to get team-specific workspace configuration
@@ -101,10 +104,7 @@ export function validateConfig(config: unknown): config is LaunchpadConfig {
   }
 
   // Validate workspace object
-  if (
-    typeof workspace['name'] !== 'string' ||
-    typeof workspace['path'] !== 'string'
-  ) {
+  if (typeof workspace['name'] !== 'string' || typeof workspace['path'] !== 'string') {
     return false;
   }
 
@@ -121,7 +121,9 @@ export function validateConfig(config: unknown): config is LaunchpadConfig {
   return true;
 }
 
-export async function validateConfigWithTeams(config: unknown): Promise<{ isValid: boolean; errors: string[] }> {
+export async function validateConfigWithTeams(
+  config: unknown
+): Promise<{ isValid: boolean; errors: string[] }> {
   const errors: string[] = [];
 
   // First validate basic config structure
@@ -139,7 +141,9 @@ export async function validateConfigWithTeams(config: unknown): Promise<{ isVali
 
   if (!teamExists) {
     const teamIds = teams.map((team: Team) => team.id);
-    errors.push(`Team '${validConfig.user.team}' not found. Available teams: ${teamIds.join(', ')}`);
+    errors.push(
+      `Team '${validConfig.user.team}' not found. Available teams: ${teamIds.join(', ')}`
+    );
   }
 
   return { isValid: errors.length === 0, errors };

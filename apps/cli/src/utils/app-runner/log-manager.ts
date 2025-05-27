@@ -37,8 +37,8 @@ export class LogManager {
     try {
       const files = await fs.readdir(this.logDir);
       return files
-        .filter(file => file.startsWith(`${repo}-`) && file.endsWith('.log'))
-        .map(file => `${this.logDir}/${file}`);
+        .filter((file) => file.startsWith(`${repo}-`) && file.endsWith('.log'))
+        .map((file) => `${this.logDir}/${file}`);
     } catch {
       return [];
     }
@@ -46,30 +46,44 @@ export class LogManager {
 
   private getLatestLogFile(logFiles: string[]): string {
     // Sort by modification time (newest first)
-    return logFiles.sort((a, b) => {
+    const sortedFiles = logFiles.sort((a, b) => {
       // Extract timestamp from filename
       const timestampA = this.extractTimestamp(a);
       const timestampB = this.extractTimestamp(b);
       return timestampB - timestampA;
-    })[0]!;
+    });
+
+    const latestFile = sortedFiles[0];
+    if (!latestFile) {
+      throw new Error('No log files available');
+    }
+
+    return latestFile;
   }
 
   private extractTimestamp(filePath: string): number {
     const filename = filePath.split('/').pop() || '';
     const timestampMatch = filename.match(/-(\d+)\.log$/);
-    return timestampMatch ? Number.parseInt(timestampMatch[1]!, 10) : 0;
+    if (timestampMatch?.[1]) {
+      return Number.parseInt(timestampMatch[1], 10);
+    }
+    return 0;
   }
 
   private async displayLogFile(filePath: string): Promise<void> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
-      const lines = content.split('\n').filter(line => line.trim());
+      const lines = content.split('\n').filter((line) => line.trim());
 
       for (const line of lines) {
         this.formatLogLine(line);
       }
     } catch (error) {
-      console.log(chalk.red(`Failed to read log file: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `Failed to read log file: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
     }
   }
 
@@ -80,7 +94,10 @@ export class LogManager {
       });
 
       tailProcess.stdout.on('data', (data: Buffer) => {
-        const lines = data.toString().split('\n').filter(line => line.trim());
+        const lines = data
+          .toString()
+          .split('\n')
+          .filter((line) => line.trim());
         for (const line of lines) {
           this.formatLogLine(line);
         }

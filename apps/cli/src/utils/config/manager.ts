@@ -1,7 +1,12 @@
 import { promises as fs } from 'node:fs';
 
 import { DataManager } from '@/utils/config/data-manager';
-import { createDefaultConfig, validateConfig, validateConfigWithTeams, migrateConfig } from '@/utils/config/defaults';
+import {
+  createDefaultConfig,
+  validateConfig,
+  validateConfigWithTeams,
+  migrateConfig
+} from '@/utils/config/defaults';
 import { getConfigPaths } from '@/utils/config/paths';
 
 import type { SlackChannels, TeamConfig } from '@/utils/config/data';
@@ -152,11 +157,14 @@ export class ConfigManager {
     return this.configPaths.cacheDir;
   }
 
-  async createDefaultConfig(user: {
-    name: string;
-    email: string;
-    team: string;
-  }, workspaceName?: string): Promise<LaunchpadConfig> {
+  async createDefaultConfig(
+    user: {
+      name: string;
+      email: string;
+      team: string;
+    },
+    workspaceName?: string
+  ): Promise<LaunchpadConfig> {
     // Validate team exists before creating config
     const dataManager = DataManager.getInstance();
     const teamExists = await dataManager.validateTeamExists(user.team);
@@ -274,7 +282,9 @@ export class ConfigManager {
     return defaultSync;
   }
 
-  async getSyncProvider(provider?: string): Promise<SyncConfig['providers'][keyof SyncConfig['providers']] | null> {
+  async getSyncProvider(
+    provider?: string
+  ): Promise<SyncConfig['providers'][keyof SyncConfig['providers']] | null> {
     const syncConfig = await this.getSyncConfig();
     if (!syncConfig) return null;
 
@@ -282,7 +292,10 @@ export class ConfigManager {
     return syncConfig.providers[providerName as keyof SyncConfig['providers']] || null;
   }
 
-  async setSyncProvider(provider: keyof SyncConfig['providers'], config: SyncConfig['providers'][keyof SyncConfig['providers']]): Promise<void> {
+  async setSyncProvider(
+    provider: keyof SyncConfig['providers'],
+    config: SyncConfig['providers'][keyof SyncConfig['providers']]
+  ): Promise<void> {
     const currentSync = await this.getSyncConfig();
     const currentProviders = currentSync?.providers || {};
 

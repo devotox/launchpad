@@ -1,72 +1,34 @@
-import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// @ts-expect-error - eslint-config-extreme doesn't have proper TypeScript types
 import eslintExtreme from 'eslint-config-extreme';
 
-const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-/** @type {{ references: Array<{ path: string }> }} */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-const buildConfig = require('./tsconfig.json');
-
-const packagePaths = buildConfig.references
-  .map((ref) => ref.path.replace('./', ''))
-  .filter((path) => path.startsWith('packages/'));
-
-const appPaths = buildConfig.references
-  .map((ref) => ref.path.replace('./', ''))
-  .filter((path) => path.startsWith('apps/'));
-
-const packageConfigs = packagePaths.map((pkgPath) => ({
-  files: [`${pkgPath}/**/*.{ts,tsx}`, `${pkgPath}/*.{ts,tsx}`],
-  settings: {
-    'import-x/resolver': {
-      typescript: {
-        alwaysTryTypes: true,
-        moduleDirectory: ['node_modules', pkgPath],
-        tsconfigRootDir: resolve(__dirname, pkgPath),
-        project: resolve(__dirname, pkgPath, 'tsconfig.json')
-      }
-    }
-  }
-}));
-
-const appConfigs = appPaths.map((appPath) => ({
-  files: [`${appPath}/**/*.{ts,tsx}`, `${appPath}/*.{ts,tsx}`],
-  settings: {
-    'import-x/resolver': {
-      typescript: {
-        alwaysTryTypes: true,
-        moduleDirectory: ['node_modules', appPath],
-        tsconfigRootDir: resolve(__dirname, appPath),
-        project: resolve(__dirname, appPath, 'tsconfig.json')
-      }
-    }
-  }
-}));
-
-const rootConfig = {
-  files: ['*.{ts,tsx}', 'config/**/*.{ts,tsx}', 'deploy/**/*.{ts,tsx}'],
-  settings: {
-    'import-x/resolver': {
-      typescript: {
-        alwaysTryTypes: true,
-        tsconfigRootDir: __dirname,
-        moduleDirectory: ['node_modules', '.'],
-        project: resolve(__dirname, 'tsconfig.json')
-      }
-    }
-  }
-};
 
 /** @type {import('eslint').Linter.Config[]} */
 const config = [
+  // @ts-expect-error - eslint-config-extreme doesn't have proper TypeScript types
   ...eslintExtreme.typescript,
-  ...packageConfigs,
-  ...appConfigs,
-  rootConfig,
+  {
+    // Global TypeScript configuration for the entire monorepo
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        project: resolve(__dirname, 'tsconfig.json'),
+        tsconfigRootDir: __dirname
+      }
+    },
+    settings: {
+      'import-x/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          project: resolve(__dirname, 'tsconfig.json'),
+          tsconfigRootDir: __dirname
+        }
+      }
+    }
+  },
   {
     rules: {
       'no-console': 'off',
@@ -84,7 +46,7 @@ const config = [
           ]
         }
       ],
-      // Explicitly set these rules to be more strict for our test files
+      // Restrict relative imports to encourage TypeScript path aliases
       'no-restricted-imports': [
         'error',
         {
@@ -92,12 +54,12 @@ const config = [
             {
               group: ['../*'],
               message:
-                'TEST: Prefer TypeScript path aliases (@/*) over relative imports with parent directory'
+                'Prefer TypeScript path aliases (@/*) over relative imports with parent directory'
             },
             {
               group: ['../../*'],
               message:
-                'TEST: Prefer TypeScript path aliases (@/*) over relative imports with multiple levels'
+                'Prefer TypeScript path aliases (@/*) over relative imports with multiple levels'
             }
           ]
         }

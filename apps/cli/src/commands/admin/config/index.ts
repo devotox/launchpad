@@ -12,8 +12,7 @@ export class ConfigCommand {
   private providerHandler = new ProviderHandler();
 
   getCommand(): Command {
-    const configCmd = new Command('config')
-      .description('Manage configuration sync');
+    const configCmd = new Command('config').description('Manage configuration sync');
 
     // Download/Upload commands
     configCmd
@@ -24,7 +23,10 @@ export class ConfigCommand {
       .option('--branch <branch>', 'Git branch', 'main')
       .option('--token <token>', 'GitHub personal access token')
       .option('--path <path>', 'File path in repository', 'launchpad-config.json')
-      .option('--gist-id <gistId>', 'GitHub Gist ID (supports: gistId, username/gistId, or full URL)')
+      .option(
+        '--gist-id <gistId>',
+        'GitHub Gist ID (supports: gistId, username/gistId, or full URL)'
+      )
       .option('--file-name <fileName>', 'File name in gist', 'launchpad-config.json')
       .option('--local-path <path>', 'Local file path for local provider')
       .action(async (options) => {
@@ -40,7 +42,10 @@ export class ConfigCommand {
       .option('--token <token>', 'GitHub personal access token')
       .option('--path <path>', 'File path in repository', 'launchpad-config.json')
       .option('--message <message>', 'Commit message')
-      .option('--gist-id <gistId>', 'GitHub Gist ID (supports: gistId, username/gistId, or full URL)')
+      .option(
+        '--gist-id <gistId>',
+        'GitHub Gist ID (supports: gistId, username/gistId, or full URL)'
+      )
       .option('--file-name <fileName>', 'File name in gist', 'launchpad-config.json')
       .option('--description <description>', 'Gist description')
       .option('--local-path <path>', 'Local file path for local provider')
@@ -52,7 +57,11 @@ export class ConfigCommand {
     configCmd
       .command('backup')
       .description('Create a local backup of configuration')
-      .option('--type <type>', 'Config type to backup (teams, setup-components, global-docs, or all)', 'all')
+      .option(
+        '--type <type>',
+        'Config type to backup (teams, setup-components, global-docs, or all)',
+        'all'
+      )
       .option('--output <path>', 'Output file path')
       .action(async (options) => {
         await this.backupHandler.backupConfig(options);
@@ -69,7 +78,10 @@ export class ConfigCommand {
     configCmd
       .command('restore')
       .description('Restore configuration from a backup file')
-      .option('--type <type>', 'Config type to restore (teams, setup-components, global-docs, or auto-detect)')
+      .option(
+        '--type <type>',
+        'Config type to restore (teams, setup-components, global-docs, or auto-detect)'
+      )
       .option('--input <path>', 'Input file path')
       .option('--no-backup', 'Skip creating backup before restore')
       .action(async (options) => {

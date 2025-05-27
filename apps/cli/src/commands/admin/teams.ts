@@ -25,8 +25,7 @@ type TeamUpdateData = {
 
 export class TeamsCommand {
   getCommand(): Command {
-    const teamsCmd = new Command('teams')
-      .description('Manage teams');
+    const teamsCmd = new Command('teams').description('Manage teams');
 
     teamsCmd
       .command('list')
@@ -65,10 +64,9 @@ export class TeamsCommand {
       });
 
     // Interactive management mode
-    teamsCmd
-      .action(async () => {
-        await this.manageTeams();
-      });
+    teamsCmd.action(async () => {
+      await this.manageTeams();
+    });
 
     return teamsCmd;
   }
@@ -119,7 +117,7 @@ export class TeamsCommand {
     const dataManager = DataManager.getInstance();
     const teams = await dataManager.getTeams();
 
-    if (teams.find(team => team.id === newTeam.id)) {
+    if (teams.find((team) => team.id === newTeam.id)) {
       console.log(chalk.red(`❌ Team with ID '${newTeam.id}' already exists.`));
       return;
     }
@@ -233,7 +231,11 @@ export class TeamsCommand {
     console.log(chalk.gray(`   Description: ${team.description}`));
     console.log(chalk.gray(`   Lead: ${team.lead}`));
     console.log(chalk.gray(`   Repositories: ${team.repositories.length}`));
-    console.log(chalk.gray(`   Tools: ${team.tools.slice(0, 3).join(', ')}${team.tools.length > 3 ? '...' : ''}`));
+    console.log(
+      chalk.gray(
+        `   Tools: ${team.tools.slice(0, 3).join(', ')}${team.tools.length > 3 ? '...' : ''}`
+      )
+    );
     if (team.slackChannels.main) {
       console.log(chalk.gray(`   Main Slack: ${team.slackChannels.main}`));
     }
@@ -353,7 +355,12 @@ export class TeamsCommand {
       return;
     }
 
-    const team = teams[teamIndex]!;
+    const team = teams[teamIndex];
+    if (!team) {
+      console.log(chalk.red(`❌ Team '${teamId}' not found.`));
+      return;
+    }
+
     const { confirmed } = await inquirer.prompt([
       {
         type: 'confirm',

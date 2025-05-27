@@ -214,7 +214,7 @@ export class SetupCommand {
       .otherwise(() => category.charAt(0).toUpperCase() + category.slice(1));
   }
 
-    private async checkComponentInstalled(componentId: string): Promise<boolean> {
+  private async checkComponentInstalled(componentId: string): Promise<boolean> {
     const { execSync } = await import('node:child_process');
     const { existsSync } = await import('node:fs');
     const { join } = await import('node:path');
@@ -296,7 +296,11 @@ export class SetupCommand {
         })
         .with('npm-token', () => {
           // Check if NPM token is set in environment variables
-          if (process.env['NPM_TOKEN'] || process.env['NODE_AUTH_TOKEN'] || process.env['NPM_AUTH_TOKEN']) {
+          if (
+            process.env['NPM_TOKEN'] ||
+            process.env['NODE_AUTH_TOKEN'] ||
+            process.env['NPM_AUTH_TOKEN']
+          ) {
             return 'echo "npm-token-set"';
           }
           // Also check if .npmrc exists and contains a token
@@ -305,7 +309,10 @@ export class SetupCommand {
             try {
               const { readFileSync } = require('node:fs');
               const npmrcContent = readFileSync(npmrcPath, 'utf-8');
-              if (npmrcContent.includes('_authToken') || npmrcContent.includes('//registry.npmjs.org/:_authToken')) {
+              if (
+                npmrcContent.includes('_authToken') ||
+                npmrcContent.includes('//registry.npmjs.org/:_authToken')
+              ) {
                 return 'echo "npmrc-token-exists"';
               }
             } catch {
@@ -314,9 +321,11 @@ export class SetupCommand {
           }
           return null;
         })
-        .with('kubernetes-access', () => 
-          // Check if kubectl is installed and configured
-           'kubectl version --client'
+        .with(
+          'kubernetes-access',
+          () =>
+            // Check if kubectl is installed and configured
+            'kubectl version --client'
         )
         .with('vpn-access', () => {
           // Check if OpenVPN client is installed
@@ -331,9 +340,11 @@ export class SetupCommand {
           }
           return null;
         })
-        .with('google-workspace', () => 
-          // This is more of a configuration check - we'll assume it needs manual verification
-           null
+        .with(
+          'google-workspace',
+          () =>
+            // This is more of a configuration check - we'll assume it needs manual verification
+            null
         )
         .otherwise(() => null);
 
@@ -349,14 +360,17 @@ export class SetupCommand {
   }
 
   private groupByCategory(components: SetupComponent[]): Record<string, SetupComponent[]> {
-    return components.reduce((acc, component) => {
-      const { category } = component;
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(component);
-      return acc;
-    }, {} as Record<string, SetupComponent[]>);
+    return components.reduce(
+      (acc, component) => {
+        const { category } = component;
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(component);
+        return acc;
+      },
+      {} as Record<string, SetupComponent[]>
+    );
   }
 
   async runFullSetup(essentialOnly = false): Promise<void> {
@@ -412,9 +426,7 @@ export class SetupCommand {
 
     const platform = this.detectPlatform();
     if (!component.platforms.includes(platform)) {
-      console.log(
-        chalk.red(`❌ Component '${component.name}' is not available for ${platform}`)
-      );
+      console.log(chalk.red(`❌ Component '${component.name}' is not available for ${platform}`));
       return;
     }
 
@@ -485,7 +497,8 @@ export class SetupCommand {
     console.log(chalk.cyan('\n💻 Setting up enhanced terminal'));
     console.log(chalk.gray('Choose your preferred terminal emulator\n'));
 
-    const terminals = platform === 'macos' ? ['iterm2', 'alacritty', 'kitty'] : ['alacritty', 'kitty'];
+    const terminals =
+      platform === 'macos' ? ['iterm2', 'alacritty', 'kitty'] : ['alacritty', 'kitty'];
     const choices = terminals.map((id) => ({
       name: id === 'iterm2' ? 'iTerm2' : id.charAt(0).toUpperCase() + id.slice(1),
       value: id
@@ -565,7 +578,10 @@ export class SetupCommand {
       await match(component.id)
         .with('homebrew', async () => {
           if (platform === 'macos') {
-            execSync('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"', { stdio: 'inherit' });
+            execSync(
+              '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+              { stdio: 'inherit' }
+            );
           }
         })
         .with('xcode-cli-tools', async () => {
@@ -582,7 +598,9 @@ export class SetupCommand {
               execSync('sudo apt-get update && sudo apt-get install -y git', { stdio: 'inherit' });
             })
             .with('windows', async () => {
-              console.log(chalk.yellow('Please download Git from: https://git-scm.com/download/win'));
+              console.log(
+                chalk.yellow('Please download Git from: https://git-scm.com/download/win')
+              );
             })
             .exhaustive();
         })
@@ -590,7 +608,10 @@ export class SetupCommand {
           // Install Volta first
           execSync('curl https://get.volta.sh | bash', { stdio: 'inherit' });
           // Source the shell to get volta in PATH
-          execSync('source ~/.bashrc || source ~/.zshrc || true', { stdio: 'inherit', shell: '/bin/bash' });
+          execSync('source ~/.bashrc || source ~/.zshrc || true', {
+            stdio: 'inherit',
+            shell: '/bin/bash'
+          });
         })
         .with('pnpm', async () => {
           // Try volta first, fallback to npm
@@ -606,7 +627,10 @@ export class SetupCommand {
               execSync('brew install gh', { stdio: 'inherit' });
             })
             .with('linux', async () => {
-              execSync('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y', { stdio: 'inherit' });
+              execSync(
+                'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y',
+                { stdio: 'inherit' }
+              );
             })
             .with('windows', async () => {
               execSync('winget install --id GitHub.cli', { stdio: 'inherit' });
@@ -619,7 +643,11 @@ export class SetupCommand {
               execSync('brew install --cask docker', { stdio: 'inherit' });
             })
             .with('windows', async () => {
-              console.log(chalk.yellow('Please download Docker Desktop from: https://www.docker.com/products/docker-desktop'));
+              console.log(
+                chalk.yellow(
+                  'Please download Docker Desktop from: https://www.docker.com/products/docker-desktop'
+                )
+              );
             })
             .otherwise(async () => {
               console.log(chalk.yellow('Please install Docker Engine for your Linux distribution'));
@@ -627,7 +655,10 @@ export class SetupCommand {
         })
         .with('docker-engine', async () => {
           if (platform === 'linux') {
-            execSync('curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh', { stdio: 'inherit' });
+            execSync(
+              'curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh',
+              { stdio: 'inherit' }
+            );
           }
         })
         .with('vscode', async () => {
@@ -649,10 +680,14 @@ export class SetupCommand {
               execSync('brew install --cask bruno', { stdio: 'inherit' });
             })
             .with('linux', async () => {
-              console.log(chalk.yellow('Please download Bruno from: https://www.usebruno.com/downloads'));
+              console.log(
+                chalk.yellow('Please download Bruno from: https://www.usebruno.com/downloads')
+              );
             })
             .with('windows', async () => {
-              console.log(chalk.yellow('Please download Bruno from: https://www.usebruno.com/downloads'));
+              console.log(
+                chalk.yellow('Please download Bruno from: https://www.usebruno.com/downloads')
+              );
             })
             .exhaustive();
         })
@@ -665,7 +700,9 @@ export class SetupCommand {
               execSync('winget install -e --id Figma.Figma', { stdio: 'inherit' });
             })
             .otherwise(async () => {
-              console.log(chalk.yellow('Figma is available as a web app at: https://www.figma.com'));
+              console.log(
+                chalk.yellow('Figma is available as a web app at: https://www.figma.com')
+              );
             });
         })
         .with('iterm2', async () => {
@@ -700,7 +737,9 @@ export class SetupCommand {
         })
         .with('node-volta', () => {
           console.log(chalk.gray('   Restart your terminal or run: source ~/.bashrc'));
-          console.log(chalk.gray("   Then run 'volta install node@lts' to install the latest LTS Node.js"));
+          console.log(
+            chalk.gray("   Then run 'volta install node@lts' to install the latest LTS Node.js")
+          );
           console.log(chalk.gray("   Run 'volta install pnpm' to install PNPM via Volta"));
         })
         .with('docker-desktop', () => {
@@ -726,7 +765,6 @@ export class SetupCommand {
         .otherwise(() => {
           // No specific post-install message
         });
-
     } catch (error) {
       console.error(chalk.red(`❌ Failed to install ${component.name}: ${error}`));
       console.log(chalk.gray('You may need to install this component manually'));

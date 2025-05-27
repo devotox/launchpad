@@ -7,7 +7,7 @@ export type Repository = {
   description: string;
   required: boolean;
   type: 'frontend' | 'backend' | 'mobile' | 'infrastructure' | 'shared';
-}
+};
 
 export type SlackChannels = {
   main: string;
@@ -15,7 +15,7 @@ export type SlackChannels = {
   alerts?: string;
   social?: string;
   support?: string;
-}
+};
 
 export type TeamConfig = {
   defaultBranch: string;
@@ -30,7 +30,7 @@ export type TeamConfig = {
     timezone: string;
     meetingDays: string[];
   };
-}
+};
 
 export type Team = {
   id: string;
@@ -42,7 +42,7 @@ export type Team = {
   tools: string[];
   teamSpecificDocs?: string[];
   config: TeamConfig;
-}
+};
 
 export type SetupComponent = {
   id: string;
@@ -51,4 +51,4 @@ export type SetupComponent = {
   category: 'essential' | 'development' | 'monitoring' | 'communication' | 'optional';
   dependencies?: string[];
   platforms: ('macos' | 'windows' | 'linux')[];
-}
+};

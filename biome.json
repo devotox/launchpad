@@ -1,38 +1,30 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "organizeImports": {
-    "enabled": true
+    "enabled": false
   },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "style": {
-        "noNonNullAssertion": "off"
-      },
-      "suspicious": {
-        "noExplicitAny": "warn"
-      },
-      "correctness": {
-        "useExhaustiveDependencies": "warn"
-      },
       "complexity": {
+        "noForEach": "off",
         "useLiteralKeys": "off"
       }
     }
   },
   "formatter": {
     "enabled": true,
-    "formatWithErrors": false,
-    "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 100,
-    "lineEnding": "lf"
+    "lineEnding": "lf",
+    "indentStyle": "space",
+    "formatWithErrors": false
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double",
-      "trailingCommas": "es5",
+      "quoteStyle": "single",
+      "trailingCommas": "none",
       "semicolons": "always"
     }
   },
@@ -41,17 +33,22 @@
       "trailingCommas": "none"
     }
   },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
   "files": {
-    "include": ["packages/**/*", "apps/**/*", "*.ts", "*.tsx", "*.js", "*.jsx", "*.json"],
     "ignore": [
-      "node_modules/**",
       "dist/**",
       "build/**",
       ".next/**",
       ".turbo/**",
       "coverage/**",
-      "pnpm-lock.yaml",
       "**/*.min.js",
+      "pnpm-lock.yaml",
+      "node_modules/**",
       "**/generated/**"
     ]
   }

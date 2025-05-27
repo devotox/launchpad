@@ -83,11 +83,15 @@ export class DataManager {
     return this.coreDataManager.getSetupComponentById(id);
   }
 
-  async getSetupComponentsByPlatform(platform: 'macos' | 'windows' | 'linux'): Promise<SetupComponent[]> {
+  async getSetupComponentsByPlatform(
+    platform: 'macos' | 'windows' | 'linux'
+  ): Promise<SetupComponent[]> {
     return this.coreDataManager.getSetupComponentsByPlatform(platform);
   }
 
-  async groupSetupComponentsByCategory(components?: SetupComponent[]): Promise<Record<string, SetupComponent[]>> {
+  async groupSetupComponentsByCategory(
+    components?: SetupComponent[]
+  ): Promise<Record<string, SetupComponent[]>> {
     return this.coreDataManager.groupSetupComponentsByCategory(components);
   }
 
@@ -201,7 +205,10 @@ export class DataManager {
     try {
       // Backup existing files
       await fs.copyFile(this.getTeamsFilePath(), join(backupDir, 'teams.json'));
-      await fs.copyFile(this.getSetupComponentsFilePath(), join(backupDir, 'setup-components.json'));
+      await fs.copyFile(
+        this.getSetupComponentsFilePath(),
+        join(backupDir, 'setup-components.json')
+      );
       await fs.copyFile(this.getGlobalDocsFilePath(), join(backupDir, 'global-docs.json'));
     } catch {
       // Files might not exist, that's okay
@@ -232,24 +239,26 @@ export class DataManager {
   private parseGistId(gistInput: string): string {
     // Handle full URLs: https://gist.github.com/username/gistId
     const fullUrlMatch = gistInput.match(/https?:\/\/gist\.github\.com\/[^/]+\/([a-f0-9]+)/);
-    if (fullUrlMatch) {
-      return fullUrlMatch[1]!;
+    if (fullUrlMatch?.[1]) {
+      return fullUrlMatch[1];
     }
 
     // Handle username/gistId format: username/gistId
     const userGistMatch = gistInput.match(/^[^/]+\/([a-f0-9]+)$/);
-    if (userGistMatch) {
-      return userGistMatch[1]!;
+    if (userGistMatch?.[1]) {
+      return userGistMatch[1];
     }
 
     // Handle raw gist ID: just the gist ID
     const rawGistMatch = gistInput.match(/^([a-f0-9]+)$/);
-    if (rawGistMatch) {
-      return rawGistMatch[1]!;
+    if (rawGistMatch?.[1]) {
+      return rawGistMatch[1];
     }
 
     // If none of the patterns match, throw an error
-    throw new Error(`Invalid gist format. Expected: full URL, username/gistId, or raw gist ID. Got: ${gistInput}`);
+    throw new Error(
+      `Invalid gist format. Expected: full URL, username/gistId, or raw gist ID. Got: ${gistInput}`
+    );
   }
 
   // Remote sync methods
@@ -263,7 +272,7 @@ export class DataManager {
 
     const url = `https://api.github.com/repos/${repository}/contents/${path}?ref=${branch}`;
     const headers: Record<string, string> = {
-      'Accept': 'application/vnd.github.v3+json',
+      Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'launchpad-cli'
     };
 
@@ -278,7 +287,7 @@ export class DataManager {
         throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json() as { type: string; content: string };
+      const data = (await response.json()) as { type: string; content: string };
 
       if (data.type !== 'file') {
         throw new Error('Config path is not a file');
@@ -291,13 +300,16 @@ export class DataManager {
     }
   }
 
-  async uploadConfigToGitHub(bundle: ConfigBundle, options: {
-    repository: string;
-    branch?: string;
-    token: string;
-    path?: string;
-    message?: string;
-  }): Promise<void> {
+  async uploadConfigToGitHub(
+    bundle: ConfigBundle,
+    options: {
+      repository: string;
+      branch?: string;
+      token: string;
+      path?: string;
+      message?: string;
+    }
+  ): Promise<void> {
     const {
       repository,
       branch = 'main',
@@ -308,8 +320,8 @@ export class DataManager {
 
     const url = `https://api.github.com/repos/${repository}/contents/${path}`;
     const headers = {
-      'Accept': 'application/vnd.github.v3+json',
-      'Authorization': `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `token ${token}`,
       'User-Agent': 'launchpad-cli'
     };
 
@@ -319,7 +331,7 @@ export class DataManager {
       try {
         const getResponse = await fetch(`${url}?ref=${branch}`, { headers });
         if (getResponse.ok) {
-          const fileData = await getResponse.json() as { sha: string };
+          const fileData = (await getResponse.json()) as { sha: string };
           sha = fileData.sha;
         }
       } catch {
@@ -345,8 +357,10 @@ export class DataManager {
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as { message?: string };
-        throw new Error(`GitHub API error: ${response.status} ${errorData.message || response.statusText}`);
+        const errorData = (await response.json()) as { message?: string };
+        throw new Error(
+          `GitHub API error: ${response.status} ${errorData.message || response.statusText}`
+        );
       }
 
       console.log(`✅ Config uploaded to GitHub: ${repository}/${path}`);
@@ -368,7 +382,7 @@ export class DataManager {
 
     const url = `https://api.github.com/gists/${gistId}`;
     const headers: Record<string, string> = {
-      'Accept': 'application/vnd.github.v3+json',
+      Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'launchpad-cli'
     };
 
@@ -383,7 +397,7 @@ export class DataManager {
         throw new Error(`GitHub Gist API error: ${response.status} ${response.statusText}`);
       }
 
-      const gistData = await response.json() as {
+      const gistData = (await response.json()) as {
         files: Record<string, { content: string; truncated: boolean }>;
       };
 
@@ -393,7 +407,9 @@ export class DataManager {
       }
 
       if (file.truncated) {
-        throw new Error('Gist file is truncated. Please use a smaller config file or GitHub repository instead.');
+        throw new Error(
+          'Gist file is truncated. Please use a smaller config file or GitHub repository instead.'
+        );
       }
 
       return JSON.parse(file.content) as ConfigBundle;
@@ -402,13 +418,16 @@ export class DataManager {
     }
   }
 
-  async uploadConfigToGist(bundle: ConfigBundle, options: {
-    gistId?: string;
-    fileName?: string;
-    token: string;
-    description?: string;
-    saveConfig?: boolean;
-  }): Promise<string> {
+  async uploadConfigToGist(
+    bundle: ConfigBundle,
+    options: {
+      gistId?: string;
+      fileName?: string;
+      token: string;
+      description?: string;
+      saveConfig?: boolean;
+    }
+  ): Promise<string> {
     const {
       gistId: gistInput,
       fileName = 'launchpad-config.json',
@@ -424,8 +443,8 @@ export class DataManager {
     }
 
     const headers = {
-      'Accept': 'application/vnd.github.v3+json',
-      'Authorization': `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `token ${token}`,
       'User-Agent': 'launchpad-cli',
       'Content-Type': 'application/json'
     };
@@ -452,11 +471,13 @@ export class DataManager {
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as { message?: string };
-          throw new Error(`GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`);
+          const errorData = (await response.json()) as { message?: string };
+          throw new Error(
+            `GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`
+          );
         }
 
-        const responseData = await response.json() as { id: string; html_url: string };
+        const responseData = (await response.json()) as { id: string; html_url: string };
         console.log(`✅ Config updated in GitHub Gist: ${responseData.html_url}`);
 
         if (saveConfig) {
@@ -485,11 +506,13 @@ export class DataManager {
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as { message?: string };
-        throw new Error(`GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`);
+        const errorData = (await response.json()) as { message?: string };
+        throw new Error(
+          `GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`
+        );
       }
 
-      const responseData = await response.json() as { id: string; html_url: string };
+      const responseData = (await response.json()) as { id: string; html_url: string };
       console.log(`✅ Config uploaded to new GitHub Gist: ${responseData.html_url}`);
       console.log(`📋 Gist ID: ${responseData.id} (automatically saved to config)`);
 
@@ -503,7 +526,12 @@ export class DataManager {
     }
   }
 
-  private async saveGistConfig(gistId: string, fileName: string, token: string, description: string): Promise<void> {
+  private async saveGistConfig(
+    gistId: string,
+    fileName: string,
+    token: string,
+    description: string
+  ): Promise<void> {
     try {
       // Import ConfigManager to save the gist configuration
       const { ConfigManager } = await import('@/utils/config/manager');
@@ -529,7 +557,10 @@ export class DataManager {
   }
 
   // Backup and restore methods
-  async backupConfigFile(configType: 'teams' | 'setup-components' | 'global-docs' | 'sync-config', outputPath?: string): Promise<string> {
+  async backupConfigFile(
+    configType: 'teams' | 'setup-components' | 'global-docs' | 'sync-config',
+    outputPath?: string
+  ): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const configDir = this.coreDataManager.getTeamsFilePath().replace('/teams.json', '');
     const backupDir = join(configDir, 'backups');
@@ -537,7 +568,8 @@ export class DataManager {
     // Ensure backup directory exists
     await fs.mkdir(backupDir, { recursive: true });
 
-    const defaultPath = outputPath || join(backupDir, `launchpad-${configType}-backup-${timestamp}.json`);
+    const defaultPath =
+      outputPath || join(backupDir, `launchpad-${configType}-backup-${timestamp}.json`);
 
     const { data, sourceFile } = await match(configType)
       .with('teams', async () => ({
@@ -576,7 +608,11 @@ export class DataManager {
     return defaultPath;
   }
 
-  async restoreConfigFile(configType: 'teams' | 'setup-components' | 'global-docs' | 'sync-config', inputPath: string, createBackup = true): Promise<void> {
+  async restoreConfigFile(
+    configType: 'teams' | 'setup-components' | 'global-docs' | 'sync-config',
+    inputPath: string,
+    createBackup = true
+  ): Promise<void> {
     const configDir = this.getTeamsFilePath().replace('/teams.json', '');
 
     // Create backup of current data if requested
@@ -607,7 +643,9 @@ export class DataManager {
     const backupData = JSON.parse(content) as { configType: string; data: unknown };
 
     if (backupData.configType !== configType) {
-      throw new Error(`Backup file is for '${backupData.configType}' but trying to restore '${configType}'`);
+      throw new Error(
+        `Backup file is for '${backupData.configType}' but trying to restore '${configType}'`
+      );
     }
 
     // Validate backup data based on config type
@@ -618,7 +656,9 @@ export class DataManager {
     // Restore the data
     await match(configType)
       .with('teams', async () => this.updateTeams(backupData.data as Team[]))
-      .with('setup-components', async () => this.updateSetupComponents(backupData.data as SetupComponent[]))
+      .with('setup-components', async () =>
+        this.updateSetupComponents(backupData.data as SetupComponent[])
+      )
       .with('global-docs', async () => this.updateGlobalOnboardingDocs(backupData.data as string[]))
       .with('sync-config', async () => this.updateSyncConfig(backupData.data as SyncConfig))
       .otherwise(async () => Promise.resolve());
@@ -678,7 +718,9 @@ export class DataManager {
       }
     }
 
-    return backups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return backups.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
   }
 
   async cleanupOldBackups(retentionDays = 30): Promise<number> {

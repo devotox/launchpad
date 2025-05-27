@@ -26,10 +26,12 @@ export class CommandResolver {
 
     return match(command)
       .with('dev', () => [...baseCmd, 'up', '--build'])
-      .with('start', () => match(options.environment)
+      .with('start', () =>
+        match(options.environment)
           .with('dev', () => [...baseCmd, 'up', '--build'])
           .with('prod', () => [...baseCmd, 'up', '-d'])
-          .otherwise(() => [...baseCmd, 'up']))
+          .otherwise(() => [...baseCmd, 'up'])
+      )
       .with('build', () => [...baseCmd, 'build'])
       .with('test', () => {
         const cmd = [...baseCmd, 'run', '--rm', 'app', 'npm', 'test'];
@@ -52,17 +54,23 @@ export class CommandResolver {
 
   private resolveNpmCommand(command: string, options: RunOptions): string[] {
     return match(command)
-      .with('dev', () => match(options.environment)
+      .with('dev', () =>
+        match(options.environment)
           .with('dev', () => ['npm', 'run', 'dev'])
-          .otherwise(() => ['npm', 'run', 'dev']))
-      .with('start', () => match(options.environment)
+          .otherwise(() => ['npm', 'run', 'dev'])
+      )
+      .with('start', () =>
+        match(options.environment)
           .with('dev', () => ['npm', 'run', 'dev'])
           .with('prod', () => ['npm', 'start'])
-          .otherwise(() => ['npm', 'start']))
-      .with('build', () => match(options.environment)
+          .otherwise(() => ['npm', 'start'])
+      )
+      .with('build', () =>
+        match(options.environment)
           .with('dev', () => ['npm', 'run', 'build:dev'])
           .with('prod', () => ['npm', 'run', 'build'])
-          .otherwise(() => ['npm', 'run', 'build']))
+          .otherwise(() => ['npm', 'run', 'build'])
+      )
       .with('test', () => {
         const baseCmd = ['npm', 'test'];
         if (options.watch) {

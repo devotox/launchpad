@@ -40,11 +40,7 @@ export class AppRunner {
     await configManager.ensureLogsDir();
   }
 
-  async runCommand(
-    command: string,
-    repositories: string[],
-    options: RunOptions
-  ): Promise<void> {
+  async runCommand(command: string, repositories: string[], options: RunOptions): Promise<void> {
     await this.ensureLogDir();
 
     if (options.parallel) {
@@ -59,7 +55,7 @@ export class AppRunner {
     repositories: string[],
     options: RunOptions
   ): Promise<void> {
-    const promises = repositories.map(async repo =>
+    const promises = repositories.map(async (repo) =>
       this.runSingleCommand(command, repo, options)
     );
 
@@ -90,11 +86,7 @@ export class AppRunner {
     const npmDockerInfo = await this.dockerDetector.detectNpmDockerUsage(repoPath, command);
 
     // Resolve the actual command to run
-    const actualCommand = await this.commandResolver.resolveCommand(
-      command,
-      options,
-      dockerInfo
-    );
+    const actualCommand = await this.commandResolver.resolveCommand(command, options, dockerInfo);
 
     // Run the command through process manager
     await this.processManager.runSingleCommand({

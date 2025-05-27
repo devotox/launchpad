@@ -5,8 +5,7 @@ import { DataManager } from '@/utils/config';
 
 export class ComponentsCommand {
   getCommand(): Command {
-    const componentsCmd = new Command('components')
-      .description('Manage setup components');
+    const componentsCmd = new Command('components').description('Manage setup components');
 
     componentsCmd
       .command('list')
@@ -23,10 +22,9 @@ export class ComponentsCommand {
       });
 
     // Interactive management mode
-    componentsCmd
-      .action(async () => {
-        await this.manageComponents();
-      });
+    componentsCmd.action(async () => {
+      await this.manageComponents();
+    });
 
     return componentsCmd;
   }
@@ -56,7 +54,7 @@ export class ComponentsCommand {
       return;
     }
 
-        for (const component of components) {
+    for (const component of components) {
       console.log(chalk.white(`\n📦 ${component.name} (${component.id})`));
       console.log(chalk.gray(`   Description: ${component.description}`));
       console.log(chalk.gray(`   Category: ${component.category}`));

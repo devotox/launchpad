@@ -16,7 +16,9 @@ export class ProviderHandler {
     console.log(chalk.gray('─'.repeat(40)));
 
     if (!syncConfig) {
-      console.log(chalk.yellow('No sync configuration found. Run \'launchpad admin config setup\' first.'));
+      console.log(
+        chalk.yellow("No sync configuration found. Run 'launchpad admin config setup' first.")
+      );
       return;
     }
 
@@ -66,7 +68,7 @@ export class ProviderHandler {
           name: 'repository',
           message: 'GitHub repository (org/repo):',
           validate: (input: string) => {
-            if (!input.includes('/')) return 'Repository must be in format \'org/repo\'';
+            if (!input.includes('/')) return "Repository must be in format 'org/repo'";
             return true;
           }
         },
@@ -204,7 +206,11 @@ export class ProviderHandler {
     }
 
     console.log(chalk.white(`Default provider: ${chalk.green(syncConfig.defaultProvider)}`));
-    console.log(chalk.white(`Auto sync: ${syncConfig.autoSync ? chalk.green('Enabled') : chalk.gray('Disabled')}`));
+    console.log(
+      chalk.white(
+        `Auto sync: ${syncConfig.autoSync ? chalk.green('Enabled') : chalk.gray('Disabled')}`
+      )
+    );
     console.log('');
 
     for (const [name, config] of providers) {
@@ -266,7 +272,7 @@ export class ProviderHandler {
         type: 'list',
         name: 'provider',
         message: 'Select default sync provider:',
-        choices: providers.map(p => ({
+        choices: providers.map((p) => ({
           name: `${p} ${p === syncConfig.defaultProvider ? '(current)' : ''}`,
           value: p
         }))
@@ -281,13 +287,17 @@ export class ProviderHandler {
     const syncConfig = await this.configManager.getSyncConfig();
 
     if (!syncConfig) {
-      console.log(chalk.red('❌ No sync configuration found. Run \'launchpad admin config setup\' first.'));
+      console.log(
+        chalk.red("❌ No sync configuration found. Run 'launchpad admin config setup' first.")
+      );
       return;
     }
 
     if (!syncConfig.providers[provider as keyof typeof syncConfig.providers]) {
       console.log(chalk.red(`❌ Sync provider '${provider}' not configured.`));
-      console.log(chalk.gray(`Available providers: ${Object.keys(syncConfig.providers).join(', ')}`));
+      console.log(
+        chalk.gray(`Available providers: ${Object.keys(syncConfig.providers).join(', ')}`)
+      );
       return;
     }
 

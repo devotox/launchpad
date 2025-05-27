@@ -62,7 +62,7 @@ export class BackupHandler {
       const syncConfig = await configManager.getSyncConfig();
 
       if (syncConfig) {
-                        // Create a sanitized version with empty tokens
+        // Create a sanitized version with empty tokens
         const sanitizedSyncConfig = {
           ...syncConfig,
           providers: Object.fromEntries(
@@ -168,7 +168,7 @@ export class BackupHandler {
     }
   }
 
-    async cleanupBackups(options: { days: string; dryRun?: boolean }): Promise<void> {
+  async cleanupBackups(options: { days: string; dryRun?: boolean }): Promise<void> {
     const retentionDays = Number.parseInt(options.days, 10);
 
     if (Number.isNaN(retentionDays) || retentionDays < 1) {
@@ -197,6 +197,6 @@ export class BackupHandler {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Byte';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${Math.round(bytes / (1024 ** i) * 100) / 100} ${sizes[i]}`;
+    return `${Math.round((bytes / 1024 ** i) * 100) / 100} ${sizes[i]}`;
   }
 }

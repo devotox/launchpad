@@ -4,10 +4,7 @@
   "description": "The essential developer onboarding tool for LoveHolidays",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",

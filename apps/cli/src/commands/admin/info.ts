@@ -5,11 +5,9 @@ import { ConfigManager, DataManager } from '@/utils/config';
 
 export class InfoCommand {
   getCommand(): Command {
-    return new Command('info')
-      .description('Show configuration file locations')
-      .action(async () => {
-        await this.showInfo();
-      });
+    return new Command('info').description('Show configuration file locations').action(async () => {
+      await this.showInfo();
+    });
   }
 
   private async showInfo(): Promise<void> {

@@ -15,7 +15,7 @@ type InitAnswers = {
   cloneType?: 'required' | 'all';
   setupDependencies?: boolean;
   setupGitHub?: boolean;
-}
+};
 
 export class InitCommand {
   getCommand(): Command {
@@ -61,7 +61,11 @@ export class InitCommand {
 
       if (runSetup) {
         console.log(chalk.cyan('\n🔧 Running essential tools setup...'));
-        console.log(chalk.gray('This will install: Homebrew, Git, Node.js (via Volta), PNPM, and GitHub CLI\n'));
+        console.log(
+          chalk.gray(
+            'This will install: Homebrew, Git, Node.js (via Volta), PNPM, and GitHub CLI\n'
+          )
+        );
 
         // Import and run setup command
         const { SetupCommand } = await import('./setup');
@@ -71,8 +75,12 @@ export class InitCommand {
         console.log(chalk.green('\n✅ Essential tools setup completed!'));
         console.log(chalk.gray('Continuing with workspace initialization...\n'));
       } else {
-        console.log(chalk.yellow('\n⚠️  Continuing without setup. Some features may not work properly.'));
-        console.log(chalk.gray('You can run setup later with: launchpad setup all --essential-only\n'));
+        console.log(
+          chalk.yellow('\n⚠️  Continuing without setup. Some features may not work properly.')
+        );
+        console.log(
+          chalk.gray('You can run setup later with: launchpad setup all --essential-only\n')
+        );
       }
     }
 
@@ -116,7 +124,7 @@ export class InitCommand {
         default: (answers: Partial<InitAnswers>) => {
           const emailParts = answers.email?.split('@') || [];
           const emailDomain = emailParts.length > 1 ? emailParts[1] : null;
-          return emailDomain ? (emailDomain.split('.')[0] || 'workspace') : 'workspace';
+          return emailDomain ? emailDomain.split('.')[0] || 'workspace' : 'workspace';
         },
         validate: (input: string) => input.length > 0 || 'Please enter a workspace name'
       },
@@ -162,11 +170,14 @@ export class InitCommand {
     ]);
 
     // Create config
-    const config = await configManager.createDefaultConfig({
-      name: answers.name,
-      email: answers.email,
-      team: answers.team
-    }, answers.workspaceName);
+    const config = await configManager.createDefaultConfig(
+      {
+        name: answers.name,
+        email: answers.email,
+        team: answers.team
+      },
+      answers.workspaceName
+    );
 
     // Update workspace path
     await configManager.updateConfig({
@@ -292,17 +303,29 @@ export class InitCommand {
       console.log(chalk.yellow('  4. 🔒 Configure SAML SSO for LoveHolidays organization'));
       console.log(chalk.gray('  5. Set up your development environment: launchpad setup all'));
     } else {
-      console.log(chalk.gray('  3. Set up your development environment (if not done): launchpad setup all'));
+      console.log(
+        chalk.gray('  3. Set up your development environment (if not done): launchpad setup all')
+      );
     }
     if (answers.cloneRepos) {
       const stepNum = answers.setupGitHub ? 4 : 6;
-      console.log(chalk.gray(`  ${stepNum}. Navigate to your workspace: cd ${answers.workspacePath}`));
+      console.log(
+        chalk.gray(`  ${stepNum}. Navigate to your workspace: cd ${answers.workspacePath}`)
+      );
       console.log(chalk.gray(`  ${stepNum + 1}. Explore the codebase and run the applications`));
     } else {
       const stepNum = answers.setupGitHub ? 4 : 6;
-      console.log(chalk.gray(`  ${stepNum}. Run "launchpad create project" to start a new project`));
+      console.log(
+        chalk.gray(`  ${stepNum}. Run "launchpad create project" to start a new project`)
+      );
     }
-    const finalStep = answers.cloneRepos ? (answers.setupGitHub ? 6 : 8) : (answers.setupGitHub ? 5 : 7);
+    const finalStep = answers.cloneRepos
+      ? answers.setupGitHub
+        ? 6
+        : 8
+      : answers.setupGitHub
+        ? 5
+        : 7;
     console.log(chalk.gray(`  ${finalStep}. Attend your first team standup`));
 
     console.log(chalk.green(`\nWelcome to LoveHolidays, ${answers.name}! 🎉`));
@@ -351,18 +374,26 @@ export class InitCommand {
             ]);
 
             if (!continueWithoutGH) {
-              console.log(chalk.gray('Setup cancelled. Install GitHub CLI and re-run: launchpad init --force'));
+              console.log(
+                chalk.gray('Setup cancelled. Install GitHub CLI and re-run: launchpad init --force')
+              );
               return;
             }
 
-            console.log(chalk.yellow('⚠️  Skipping GitHub authentication. Repository cloning may fail.'));
+            console.log(
+              chalk.yellow('⚠️  Skipping GitHub authentication. Repository cloning may fail.')
+            );
             console.log(chalk.gray('After installing GitHub CLI, run: gh auth login'));
             return;
           }
         } else if (platform === 'linux') {
           console.log(chalk.yellow('⚠️  GitHub CLI not found.'));
           console.log(chalk.gray('Please install GitHub CLI:'));
-          console.log(chalk.blue('• Ubuntu/Debian: https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian-ubuntu-linux-raspberry-pi-os-apt'));
+          console.log(
+            chalk.blue(
+              '• Ubuntu/Debian: https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian-ubuntu-linux-raspberry-pi-os-apt'
+            )
+          );
           console.log(chalk.blue('• Other Linux: https://cli.github.com/'));
 
           const { continueWithoutGH } = await inquirer.prompt([
@@ -375,11 +406,15 @@ export class InitCommand {
           ]);
 
           if (!continueWithoutGH) {
-            console.log(chalk.gray('Setup cancelled. Install GitHub CLI and re-run: launchpad init --force'));
+            console.log(
+              chalk.gray('Setup cancelled. Install GitHub CLI and re-run: launchpad init --force')
+            );
             return;
           }
 
-          console.log(chalk.yellow('⚠️  Skipping GitHub authentication. Repository cloning may fail.'));
+          console.log(
+            chalk.yellow('⚠️  Skipping GitHub authentication. Repository cloning may fail.')
+          );
           return;
         } else if (platform === 'win32') {
           console.log(chalk.yellow('⚠️  GitHub CLI not found.'));
@@ -398,11 +433,15 @@ export class InitCommand {
           ]);
 
           if (!continueWithoutGH) {
-            console.log(chalk.gray('Setup cancelled. Install GitHub CLI and re-run: launchpad init --force'));
+            console.log(
+              chalk.gray('Setup cancelled. Install GitHub CLI and re-run: launchpad init --force')
+            );
             return;
           }
 
-          console.log(chalk.yellow('⚠️  Skipping GitHub authentication. Repository cloning may fail.'));
+          console.log(
+            chalk.yellow('⚠️  Skipping GitHub authentication. Repository cloning may fail.')
+          );
           return;
         }
       }
@@ -447,7 +486,11 @@ export class InitCommand {
       ]);
 
       if (!proceedAuth) {
-        console.log(chalk.gray('Skipping GitHub authentication. You can set this up later with: gh auth login'));
+        console.log(
+          chalk.gray(
+            'Skipping GitHub authentication. You can set this up later with: gh auth login'
+          )
+        );
         return;
       }
 
@@ -462,12 +505,10 @@ export class InitCommand {
 
         // Guide through SSO setup
         await this.guideSSOSetup();
-
       } catch {
         console.log(chalk.red('❌ GitHub authentication failed.'));
         console.log(chalk.gray('You can retry later with: gh auth login'));
       }
-
     } catch (error) {
       console.error(chalk.red(`❌ Error setting up GitHub authentication: ${error}`));
       console.log(chalk.gray('You can set this up manually later with: gh auth login'));
@@ -492,7 +533,11 @@ export class InitCommand {
     console.log(chalk.white('\n🔗 Helpful Links:'));
     console.log(chalk.blue('• Personal Access Tokens: https://github.com/settings/tokens'));
     console.log(chalk.blue('• SSH Keys: https://github.com/settings/keys'));
-    console.log(chalk.blue('• SSO Documentation: https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-saml-single-sign-on'));
+    console.log(
+      chalk.blue(
+        '• SSO Documentation: https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-saml-single-sign-on'
+      )
+    );
 
     const { openBrowser } = await inquirer.prompt([
       {
