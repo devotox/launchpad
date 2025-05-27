@@ -1,9 +1,11 @@
-import { promises as fs } from "node:fs";
-import type { LaunchpadConfig, ConfigOptions, SyncConfig } from "@/utils/config/types";
-import type { SlackChannels, TeamConfig } from "@/utils/config/data";
-import { getConfigPaths } from "@/utils/config/paths";
-import { createDefaultConfig, validateConfig, validateConfigWithTeams, migrateConfig } from "@/utils/config/defaults";
-import { DataManager } from "@/utils/config/data-manager";
+import { promises as fs } from 'node:fs';
+
+import { DataManager } from '@/utils/config/data-manager';
+import { createDefaultConfig, validateConfig, validateConfigWithTeams, migrateConfig } from '@/utils/config/defaults';
+import { getConfigPaths } from '@/utils/config/paths';
+
+import type { SlackChannels, TeamConfig } from '@/utils/config/data';
+import type { LaunchpadConfig, ConfigOptions, SyncConfig } from '@/utils/config/types';
 
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -47,12 +49,12 @@ export class ConfigManager {
 
   async loadConfig(): Promise<LaunchpadConfig | null> {
     try {
-      const configData = await fs.readFile(this.configPaths.configFile, "utf-8");
+      const configData = await fs.readFile(this.configPaths.configFile, 'utf-8');
       const parsedConfig = JSON.parse(configData);
 
       // Validate config structure
       if (!validateConfig(parsedConfig)) {
-        console.warn("Invalid config structure detected, attempting migration...");
+        console.warn('Invalid config structure detected, attempting migration...');
         this.config = migrateConfig(parsedConfig);
         await this.saveConfig(this.config);
         return this.config;
@@ -61,15 +63,15 @@ export class ConfigManager {
       // Validate team exists in teams.json
       const teamValidation = await validateConfigWithTeams(parsedConfig);
       if (!teamValidation.isValid) {
-        console.warn("Config validation errors:", teamValidation.errors);
+        console.warn('Config validation errors:', teamValidation.errors);
         // Don't auto-migrate team issues, let user handle it
-        console.warn("Please check your team configuration and teams.json file");
+        console.warn('Please check your team configuration and teams.json file');
       }
 
       this.config = parsedConfig;
       return this.config;
     } catch (error) {
-      console.warn("Failed to load config:", error);
+      console.warn('Failed to load config:', error);
       return null;
     }
   }
@@ -80,7 +82,7 @@ export class ConfigManager {
     // Validate before saving
     const validation = await validateConfigWithTeams(config);
     if (!validation.isValid) {
-      throw new Error(`Cannot save invalid config: ${validation.errors.join(", ")}`);
+      throw new Error(`Cannot save invalid config: ${validation.errors.join(', ')}`);
     }
 
     config.lastUpdated = new Date().toISOString();
@@ -90,7 +92,7 @@ export class ConfigManager {
 
   async getConfig(): Promise<LaunchpadConfig | null> {
     if (!this.config) {
-      return await this.loadConfig();
+      return this.loadConfig();
     }
     return this.config;
   }
@@ -110,7 +112,7 @@ export class ConfigManager {
       teamSettings: updates.teamSettings
         ? { ...currentConfig.teamSettings, ...updates.teamSettings }
         : currentConfig.teamSettings,
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
     };
 
     await this.saveConfig(updatedConfig);
@@ -160,7 +162,7 @@ export class ConfigManager {
     const teamExists = await dataManager.validateTeamExists(user.team);
     if (!teamExists) {
       const validTeams = await dataManager.getValidTeamIds();
-      throw new Error(`Team '${user.team}' does not exist. Valid teams: ${validTeams.join(", ")}`);
+      throw new Error(`Team '${user.team}' does not exist. Valid teams: ${validTeams.join(', ')}`);
     }
 
     const defaultConfig = await createDefaultConfig(user, workspaceName);
@@ -187,7 +189,7 @@ export class ConfigManager {
   }
 
   async updateTeamSettings(
-    settings: Partial<NonNullable<LaunchpadConfig["teamSettings"]>>
+    settings: Partial<NonNullable<LaunchpadConfig['teamSettings']>>
   ): Promise<void> {
     const currentConfig = await this.getConfig();
     if (!currentConfig) {
@@ -196,15 +198,15 @@ export class ConfigManager {
 
     const currentTeamSettings = currentConfig.teamSettings || {
       slackNotifications: true,
-      preferredSlackChannel: "",
-      customWorkflows: {},
+      preferredSlackChannel: '',
+      customWorkflows: {}
     };
 
     await this.updateConfig({
       teamSettings: {
         ...currentTeamSettings,
-        ...settings,
-      },
+        ...settings
+      }
     });
   }
 
@@ -219,7 +221,7 @@ export class ConfigManager {
     return config?.workspace.repositories || [];
   }
 
-  async getUserInfo(): Promise<LaunchpadConfig["user"] | null> {
+  async getUserInfo(): Promise<LaunchpadConfig['user'] | null> {
     const config = await this.getConfig();
     return config?.user || null;
   }
@@ -227,7 +229,7 @@ export class ConfigManager {
   // Sync configuration management
   async getSyncConfig(): Promise<SyncConfig | null> {
     try {
-      const syncData = await fs.readFile(this.configPaths.syncConfigFile, "utf-8");
+      const syncData = await fs.readFile(this.configPaths.syncConfigFile, 'utf-8');
       return JSON.parse(syncData) as SyncConfig;
     } catch {
       return null;
@@ -245,11 +247,11 @@ export class ConfigManager {
       defaultProvider: 'gist',
       providers: {
         ...currentSync?.providers,
-        ...updates.providers,
+        ...updates.providers
       },
       autoSync: false,
       ...currentSync,
-      ...updates,
+      ...updates
     };
 
     await this.saveSyncConfig(updatedSync);
@@ -262,10 +264,10 @@ export class ConfigManager {
         local: {
           path: this.configPaths.configDir,
           autoBackup: true,
-          backupRetention: 30,
-        },
+          backupRetention: 30
+        }
       },
-      autoSync: false,
+      autoSync: false
     };
 
     await this.saveSyncConfig(defaultSync);
@@ -283,13 +285,13 @@ export class ConfigManager {
   async setSyncProvider(provider: keyof SyncConfig['providers'], config: SyncConfig['providers'][keyof SyncConfig['providers']]): Promise<void> {
     const providers = { [provider]: config };
     await this.updateSyncConfig({
-      providers,
+      providers
     });
   }
 
   async setDefaultSyncProvider(provider: SyncConfig['defaultProvider']): Promise<void> {
     await this.updateSyncConfig({
-      defaultProvider: provider,
+      defaultProvider: provider
     });
   }
 

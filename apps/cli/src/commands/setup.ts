@@ -1,187 +1,189 @@
-import { DataManager } from "@/utils/config";
-import type { SetupComponent } from "@/utils/config";
-import chalk from "chalk";
-import { Command } from "commander";
-import inquirer from "inquirer";
+import chalk from 'chalk';
+import { Command } from 'commander';
+import inquirer from 'inquirer';
+
+import { DataManager } from '@/utils/config';
+
+import type { SetupComponent } from '@/utils/config';
 
 export class SetupCommand {
   getCommand(): Command {
-    const setupCmd = new Command("setup").description("Set up development tools and environment");
+    const setupCmd = new Command('setup').description('Set up development tools and environment');
 
     // Main setup command
     setupCmd
-      .command("all")
-      .description("Interactive setup of all development tools")
-      .option("--essential-only", "Only install essential tools")
+      .command('all')
+      .description('Interactive setup of all development tools')
+      .option('--essential-only', 'Only install essential tools')
       .action(async (options) => {
         await this.runFullSetup(options.essentialOnly);
       });
 
     // Individual component setups
     setupCmd
-      .command("xcode")
-      .description("Install Xcode Command Line Tools")
+      .command('xcode')
+      .description('Install Xcode Command Line Tools')
       .action(async () => {
-        await this.setupComponent("xcode-cli-tools");
+        await this.setupComponent('xcode-cli-tools');
       });
 
     setupCmd
-      .command("homebrew")
-      .description("Install Homebrew package manager")
+      .command('homebrew')
+      .description('Install Homebrew package manager')
       .action(async () => {
-        await this.setupComponent("homebrew");
+        await this.setupComponent('homebrew');
       });
 
     setupCmd
-      .command("node")
-      .description("Install Node.js and NPM")
+      .command('node')
+      .description('Install Node.js and NPM')
       .action(async () => {
-        await this.setupComponent("node-nvm");
+        await this.setupComponent('node-nvm');
       });
 
     setupCmd
-      .command("pnpm")
-      .description("Install PNPM package manager")
+      .command('pnpm')
+      .description('Install PNPM package manager')
       .action(async () => {
-        await this.setupComponent("pnpm");
+        await this.setupComponent('pnpm');
       });
 
     setupCmd
-      .command("git")
-      .description("Install Git version control")
+      .command('git')
+      .description('Install Git version control')
       .action(async () => {
-        await this.setupComponent("git");
+        await this.setupComponent('git');
       });
 
     setupCmd
-      .command("docker")
-      .description("Install Docker Desktop")
+      .command('docker')
+      .description('Install Docker Desktop')
       .action(async () => {
-        await this.setupComponent("docker-desktop");
+        await this.setupComponent('docker-desktop');
       });
 
     setupCmd
-      .command("kubernetes")
-      .description("Set up Kubernetes tools (kubectl, Lens)")
+      .command('kubernetes')
+      .description('Set up Kubernetes tools (kubectl, Lens)')
       .action(async () => {
         await this.setupKubernetes();
       });
 
     setupCmd
-      .command("github")
-      .description("Set up GitHub CLI and authentication")
+      .command('github')
+      .description('Set up GitHub CLI and authentication')
       .action(async () => {
         await this.setupGitHub();
       });
 
     setupCmd
-      .command("gcloud")
-      .description("Install Google Cloud SDK")
+      .command('gcloud')
+      .description('Install Google Cloud SDK')
       .action(async () => {
-        await this.setupComponent("google-cloud-sdk");
+        await this.setupComponent('google-cloud-sdk');
       });
 
     setupCmd
-      .command("npm-token")
-      .description("Set up NPM token for LoveHolidays packages")
+      .command('npm-token')
+      .description('Set up NPM token for LoveHolidays packages')
       .action(async () => {
-        await this.setupComponent("npm-token");
+        await this.setupComponent('npm-token');
       });
 
     setupCmd
-      .command("google-workspace")
-      .description("Verify Google Workspace access")
+      .command('google-workspace')
+      .description('Verify Google Workspace access')
       .action(async () => {
-        await this.setupComponent("google-workspace");
+        await this.setupComponent('google-workspace');
       });
 
     setupCmd
-      .command("vpn")
-      .description("Set up OpenVPN client")
+      .command('vpn')
+      .description('Set up OpenVPN client')
       .action(async () => {
-        await this.setupComponent("vpn-access");
+        await this.setupComponent('vpn-access');
       });
 
     setupCmd
-      .command("bruno")
-      .description("Install Bruno API client")
+      .command('bruno')
+      .description('Install Bruno API client')
       .action(async () => {
-        await this.setupComponent("bruno");
+        await this.setupComponent('bruno');
       });
 
     setupCmd
-      .command("postman")
-      .description("Install Postman API client")
+      .command('postman')
+      .description('Install Postman API client')
       .action(async () => {
-        await this.setupComponent("postman");
+        await this.setupComponent('postman');
       });
 
     setupCmd
-      .command("insomnia")
-      .description("Install Insomnia API client")
+      .command('insomnia')
+      .description('Install Insomnia API client')
       .action(async () => {
-        await this.setupComponent("insomnia");
+        await this.setupComponent('insomnia');
       });
 
     setupCmd
-      .command("figma")
-      .description("Install Figma design tool")
+      .command('figma')
+      .description('Install Figma design tool')
       .action(async () => {
-        await this.setupComponent("figma");
+        await this.setupComponent('figma');
       });
 
     setupCmd
-      .command("slack")
-      .description("Install Slack communication platform")
+      .command('slack')
+      .description('Install Slack communication platform')
       .action(async () => {
-        await this.setupComponent("slack");
+        await this.setupComponent('slack');
       });
 
     setupCmd
-      .command("iterm2")
-      .description("Install iTerm2 terminal (macOS)")
+      .command('iterm2')
+      .description('Install iTerm2 terminal (macOS)')
       .action(async () => {
-        await this.setupComponent("iterm2");
+        await this.setupComponent('iterm2');
       });
 
     setupCmd
-      .command("alacritty")
-      .description("Install Alacritty terminal")
+      .command('alacritty')
+      .description('Install Alacritty terminal')
       .action(async () => {
-        await this.setupComponent("alacritty");
+        await this.setupComponent('alacritty');
       });
 
     setupCmd
-      .command("ngrok")
-      .description("Install ngrok tunneling service")
+      .command('ngrok')
+      .description('Install ngrok tunneling service')
       .action(async () => {
-        await this.setupComponent("ngrok");
+        await this.setupComponent('ngrok');
       });
 
     setupCmd
-      .command("api-client")
-      .description("Install API development tools")
+      .command('api-client')
+      .description('Install API development tools')
       .action(async () => {
         await this.setupApiClient();
       });
 
     setupCmd
-      .command("terminal")
-      .description("Install enhanced terminal options")
+      .command('terminal')
+      .description('Install enhanced terminal options')
       .action(async () => {
         await this.setupTerminal();
       });
 
     setupCmd
-      .command("loveholidays")
-      .description("Set up LoveHolidays-specific tools and access")
+      .command('loveholidays')
+      .description('Set up LoveHolidays-specific tools and access')
       .action(async () => {
         await this.setupLoveHolidays();
       });
 
     setupCmd
-      .command("status")
-      .description("Check installation status of all tools")
+      .command('status')
+      .description('Check installation status of all tools')
       .action(async () => {
         await this.checkSetupStatus();
       });
@@ -189,27 +191,27 @@ export class SetupCommand {
     return setupCmd;
   }
 
-  private detectPlatform(): "macos" | "linux" | "windows" {
+  private detectPlatform(): 'macos' | 'linux' | 'windows' {
     switch (process.platform) {
-      case "darwin":
-        return "macos";
-      case "linux":
-        return "linux";
-      case "win32":
-        return "windows";
+      case 'darwin':
+        return 'macos';
+      case 'linux':
+        return 'linux';
+      case 'win32':
+        return 'windows';
       default:
-        return "linux"; // fallback
+        return 'linux'; // fallback
     }
   }
 
   private getCategoryTitle(category: string): string {
     switch (category) {
-      case "essential":
-        return "Essential Tools";
-      case "development":
-        return "Development Tools";
-      case "optional":
-        return "Optional Tools";
+      case 'essential':
+        return 'Essential Tools';
+      case 'development':
+        return 'Development Tools';
+      case 'optional':
+        return 'Optional Tools';
       default:
         return category.charAt(0).toUpperCase() + category.slice(1);
     }
@@ -223,7 +225,7 @@ export class SetupCommand {
 
   private groupByCategory(components: SetupComponent[]): Record<string, SetupComponent[]> {
     return components.reduce((acc, component) => {
-      const category = component.category;
+      const { category } = component;
       if (!acc[category]) {
         acc[category] = [];
       }
@@ -233,9 +235,9 @@ export class SetupCommand {
   }
 
   async runFullSetup(essentialOnly = false): Promise<void> {
-    console.log(chalk.cyan("🚀 LoveHolidays Development Environment Setup"));
+    console.log(chalk.cyan('🚀 LoveHolidays Development Environment Setup'));
     console.log(
-      chalk.gray("This will guide you through setting up all necessary development tools\n")
+      chalk.gray('This will guide you through setting up all necessary development tools\n')
     );
 
     const dataManager = DataManager.getInstance();
@@ -247,19 +249,19 @@ export class SetupCommand {
 
     // Filter by category if essential only
     const components = essentialOnly
-      ? availableComponents.filter((comp) => comp.category === "essential")
+      ? availableComponents.filter((comp) => comp.category === 'essential')
       : availableComponents;
 
     // Group components by category
     const categories = this.groupByCategory(components);
 
     console.log(chalk.yellow(`Platform detected: ${platform}`));
-    console.log(chalk.yellow(`Setup mode: ${essentialOnly ? "Essential only" : "Full setup"}\n`));
+    console.log(chalk.yellow(`Setup mode: ${essentialOnly ? 'Essential only' : 'Full setup'}\n`));
 
     // Process each category
     for (const [category, categoryComponents] of Object.entries(categories)) {
       console.log(chalk.yellow(`\n📦 ${this.getCategoryTitle(category)}`));
-      console.log(chalk.gray("─".repeat(40)));
+      console.log(chalk.gray('─'.repeat(40)));
 
       for (const component of categoryComponents) {
         const shouldInstall = await this.promptForComponent(component);
@@ -269,7 +271,7 @@ export class SetupCommand {
       }
     }
 
-    console.log(chalk.green("\n✅ Setup completed!"));
+    console.log(chalk.green('\n✅ Setup completed!'));
     console.log(chalk.gray("Run 'launchpad setup status' to check installation status"));
   }
 
@@ -304,50 +306,50 @@ export class SetupCommand {
   }
 
   async setupKubernetes(): Promise<void> {
-    console.log(chalk.cyan("\n☸️  Setting up Kubernetes tools"));
-    console.log(chalk.gray("This will install kubectl and Lens IDE\n"));
+    console.log(chalk.cyan('\n☸️  Setting up Kubernetes tools'));
+    console.log(chalk.gray('This will install kubectl and Lens IDE\n'));
 
-    const kubernetesComponents = ["kubernetes-lens"];
+    const kubernetesComponents = ['kubernetes-lens'];
     for (const componentId of kubernetesComponents) {
       await this.setupComponent(componentId);
     }
 
-    console.log(chalk.green("\n✅ Kubernetes setup completed!"));
-    console.log(chalk.gray("Next steps:"));
-    console.log(chalk.gray("1. Configure kubectl with your cluster credentials"));
-    console.log(chalk.gray("2. Open Lens and connect to your clusters"));
+    console.log(chalk.green('\n✅ Kubernetes setup completed!'));
+    console.log(chalk.gray('Next steps:'));
+    console.log(chalk.gray('1. Configure kubectl with your cluster credentials'));
+    console.log(chalk.gray('2. Open Lens and connect to your clusters'));
   }
 
   async setupGitHub(): Promise<void> {
-    console.log(chalk.cyan("\n🐙 Setting up GitHub access"));
-    console.log(chalk.gray("This will install GitHub CLI and help configure authentication\n"));
+    console.log(chalk.cyan('\n🐙 Setting up GitHub access'));
+    console.log(chalk.gray('This will install GitHub CLI and help configure authentication\n'));
 
-    await this.setupComponent("github-cli");
-    await this.setupComponent("github-access");
+    await this.setupComponent('github-cli');
+    await this.setupComponent('github-access');
 
-    console.log(chalk.green("\n✅ GitHub setup completed!"));
-    console.log(chalk.gray("Next steps:"));
+    console.log(chalk.green('\n✅ GitHub setup completed!'));
+    console.log(chalk.gray('Next steps:'));
     console.log(chalk.gray("1. Run 'gh auth login' to authenticate"));
-    console.log(chalk.gray("2. Configure SSH keys for repository access"));
+    console.log(chalk.gray('2. Configure SSH keys for repository access'));
   }
 
   async setupApiClient(): Promise<void> {
-    console.log(chalk.cyan("\n🔌 Setting up API development tools"));
-    console.log(chalk.gray("Choose your preferred API client\n"));
+    console.log(chalk.cyan('\n🔌 Setting up API development tools'));
+    console.log(chalk.gray('Choose your preferred API client\n'));
 
-    const apiClients = ["bruno", "postman", "insomnia"];
+    const apiClients = ['bruno', 'postman', 'insomnia'];
     const choices = apiClients.map((id) => ({
       name: id.charAt(0).toUpperCase() + id.slice(1),
-      value: id,
+      value: id
     }));
 
     const { selectedClient } = await inquirer.prompt([
       {
-        type: "list",
-        name: "selectedClient",
-        message: "Which API client would you like to install?",
-        choices,
-      },
+        type: 'list',
+        name: 'selectedClient',
+        message: 'Which API client would you like to install?',
+        choices
+      }
     ]);
 
     await this.setupComponent(selectedClient);
@@ -355,42 +357,42 @@ export class SetupCommand {
 
   async setupTerminal(): Promise<void> {
     const platform = this.detectPlatform();
-    console.log(chalk.cyan("\n💻 Setting up enhanced terminal"));
-    console.log(chalk.gray("Choose your preferred terminal emulator\n"));
+    console.log(chalk.cyan('\n💻 Setting up enhanced terminal'));
+    console.log(chalk.gray('Choose your preferred terminal emulator\n'));
 
-    const terminals = platform === "macos" ? ["iterm2", "alacritty", "kitty"] : ["alacritty", "kitty"];
+    const terminals = platform === 'macos' ? ['iterm2', 'alacritty', 'kitty'] : ['alacritty', 'kitty'];
     const choices = terminals.map((id) => ({
-      name: id === "iterm2" ? "iTerm2" : id.charAt(0).toUpperCase() + id.slice(1),
-      value: id,
+      name: id === 'iterm2' ? 'iTerm2' : id.charAt(0).toUpperCase() + id.slice(1),
+      value: id
     }));
 
     const { selectedTerminal } = await inquirer.prompt([
       {
-        type: "list",
-        name: "selectedTerminal",
-        message: "Which terminal would you like to install?",
-        choices,
-      },
+        type: 'list',
+        name: 'selectedTerminal',
+        message: 'Which terminal would you like to install?',
+        choices
+      }
     ]);
 
     await this.setupComponent(selectedTerminal);
   }
 
   async setupLoveHolidays(): Promise<void> {
-    console.log(chalk.cyan("\n❤️  Setting up LoveHolidays-specific tools"));
-    console.log(chalk.gray("This will configure access to internal tools and services\n"));
+    console.log(chalk.cyan('\n❤️  Setting up LoveHolidays-specific tools'));
+    console.log(chalk.gray('This will configure access to internal tools and services\n'));
 
-    const lhComponents = ["npm-token", "vpn-access", "google-workspace", "kubernetes-access"];
+    const lhComponents = ['npm-token', 'vpn-access', 'google-workspace', 'kubernetes-access'];
     for (const componentId of lhComponents) {
       await this.setupComponent(componentId);
     }
 
-    console.log(chalk.green("\n✅ LoveHolidays setup completed!"));
+    console.log(chalk.green('\n✅ LoveHolidays setup completed!'));
   }
 
   async checkSetupStatus(): Promise<void> {
-    console.log(chalk.cyan("\n📊 Development Environment Status"));
-    console.log(chalk.gray("─".repeat(40)));
+    console.log(chalk.cyan('\n📊 Development Environment Status'));
+    console.log(chalk.gray('─'.repeat(40)));
 
     const dataManager = DataManager.getInstance();
     const platform = this.detectPlatform();
@@ -403,7 +405,7 @@ export class SetupCommand {
       console.log(chalk.yellow(`\n${this.getCategoryTitle(category)}:`));
       for (const component of components) {
         const isInstalled = await this.checkComponentInstalled(component.id);
-        const status = isInstalled ? chalk.green("✅ Installed") : chalk.red("❌ Not installed");
+        const status = isInstalled ? chalk.green('✅ Installed') : chalk.red('❌ Not installed');
         console.log(`  ${status} ${component.name}`);
       }
     }
@@ -418,11 +420,11 @@ export class SetupCommand {
 
     const { shouldInstall } = await inquirer.prompt([
       {
-        type: "confirm",
-        name: "shouldInstall",
+        type: 'confirm',
+        name: 'shouldInstall',
         message: `Install ${component.name}? (${component.description})`,
-        default: component.category === "essential",
-      },
+        default: component.category === 'essential'
+      }
     ]);
 
     return shouldInstall;
@@ -438,23 +440,23 @@ export class SetupCommand {
 
     // Add component-specific post-install messages
     switch (component.id) {
-      case "homebrew":
+      case 'homebrew':
         console.log(chalk.gray("   Run 'brew --version' to verify installation"));
         break;
-      case "node-nvm":
+      case 'node-nvm':
         console.log(chalk.gray("   Run 'nvm install --lts' to install the latest LTS Node.js"));
         break;
-      case "docker-desktop":
-        console.log(chalk.gray("   Start Docker Desktop from Applications"));
+      case 'docker-desktop':
+        console.log(chalk.gray('   Start Docker Desktop from Applications'));
         break;
-      case "github-cli":
+      case 'github-cli':
         console.log(chalk.gray("   Run 'gh auth login' to authenticate with GitHub"));
         break;
-      case "npm-token":
-        console.log(chalk.gray("   Add your NPM token to ~/.npmrc"));
+      case 'npm-token':
+        console.log(chalk.gray('   Add your NPM token to ~/.npmrc'));
         break;
-      case "vpn-access":
-        console.log(chalk.gray("   Download VPN config from IT support"));
+      case 'vpn-access':
+        console.log(chalk.gray('   Download VPN config from IT support'));
         break;
     }
   }

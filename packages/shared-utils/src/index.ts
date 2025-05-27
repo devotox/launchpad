@@ -1,24 +1,20 @@
-export const formatProjectName = (name: string): string => {
-  return name
+export const formatProjectName = (name: string): string => name
     .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-};
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 
 export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
-export const createProjectStructure = () => {
-  return {
+export const createProjectStructure = () => ({
     src: {
       components: {},
       utils: {},
-      types: {},
+      types: {}
     },
     tests: {},
-    docs: {},
-  };
-};
+    docs: {}
+  });

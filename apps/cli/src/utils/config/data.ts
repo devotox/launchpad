@@ -1,15 +1,15 @@
 // Type definitions for teams, setup components, and onboarding resources
 // All actual data is stored in JSON files in ~/.config/launchpad/
 
-export interface Repository {
+export type Repository = {
   name: string;
   url: string;
   description: string;
   required: boolean;
-  type: "frontend" | "backend" | "mobile" | "infrastructure" | "shared";
+  type: 'frontend' | 'backend' | 'mobile' | 'infrastructure' | 'shared';
 }
 
-export interface SlackChannels {
+export type SlackChannels = {
   main: string;
   standup?: string;
   alerts?: string;
@@ -17,7 +17,7 @@ export interface SlackChannels {
   support?: string;
 }
 
-export interface TeamConfig {
+export type TeamConfig = {
   defaultBranch: string;
   codeReviewRequired: boolean;
   deploymentEnvironments: string[];
@@ -32,7 +32,7 @@ export interface TeamConfig {
   };
 }
 
-export interface Team {
+export type Team = {
   id: string;
   name: string;
   description: string;
@@ -44,11 +44,11 @@ export interface Team {
   config: TeamConfig;
 }
 
-export interface SetupComponent {
+export type SetupComponent = {
   id: string;
   name: string;
   description: string;
-  category: "essential" | "development" | "monitoring" | "communication" | "optional";
+  category: 'essential' | 'development' | 'monitoring' | 'communication' | 'optional';
   dependencies?: string[];
-  platforms: ("macos" | "windows" | "linux")[];
+  platforms: ('macos' | 'windows' | 'linux')[];
 }

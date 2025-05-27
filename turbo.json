@@ -29,7 +29,7 @@
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
-    "type-check": {
+    "typecheck": {
       "dependsOn": ["^build"]
     },
     "clean": {

@@ -1,4 +1,4 @@
-export { LaunchpadCLI } from "@/cli";
+export { LaunchpadCLI } from '@/cli';
 export {
   ConfigManager,
   getConfigDirectory,
@@ -7,5 +7,5 @@ export {
   createDefaultConfig,
   validateConfig,
   migrateConfig
-} from "@/utils/config";
-export type { LaunchpadConfig, ConfigPaths, ConfigOptions } from "@/utils/config";
+} from '@/utils/config';
+export type { LaunchpadConfig, ConfigPaths, ConfigOptions } from '@/utils/config';

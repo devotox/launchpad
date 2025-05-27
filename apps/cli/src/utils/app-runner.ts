@@ -1,13 +1,15 @@
-import { promises as fs } from "node:fs";
-import { createWriteStream } from "node:fs";
-import { join } from "node:path";
-import { spawn } from "node:child_process";
-import type { ChildProcess } from "node:child_process";
-import chalk from "chalk";
-import { match } from "ts-pattern";
-import { ConfigManager } from "@/utils/config";
+import { spawn } from 'node:child_process';
+import { promises as fs, createWriteStream  } from 'node:fs';
+import { join } from 'node:path';
 
-export interface RunningProcess {
+import chalk from 'chalk';
+import { match } from 'ts-pattern';
+
+import { ConfigManager } from '@/utils/config';
+
+import type { ChildProcess } from 'node:child_process';
+
+export type RunningProcess = {
   repo: string;
   command: string;
   pid: number;
@@ -20,7 +22,7 @@ export interface RunningProcess {
   dockerServices?: string[]; // services started by this process
 }
 
-export interface RunOptions {
+export type RunOptions = {
   environment: string;
   parallel: boolean;
   watch: boolean;
@@ -65,7 +67,7 @@ export class AppRunner {
   ): Promise<void> {
     console.log(chalk.cyan(`\n🔄 Running '${command}' in parallel on ${repositories.length} repositories...\n`));
 
-    const promises = repositories.map(repo => this.runSingleCommand(command, repo, options));
+    const promises = repositories.map(async repo => this.runSingleCommand(command, repo, options));
 
     try {
       await Promise.all(promises);
@@ -90,7 +92,7 @@ export class AppRunner {
         console.log(chalk.red(`❌ Failed '${command}' for ${repo}`));
         if (!options.parallel) {
           // In sequential mode, ask if user wants to continue
-          console.log(chalk.yellow("⚠️  Continuing with next repository..."));
+          console.log(chalk.yellow('⚠️  Continuing with next repository...'));
         }
       }
     }
@@ -155,7 +157,7 @@ export class AppRunner {
       const logStream = createWriteStream(logFile);
 
       // Handle stdout
-      childProcess.stdout?.on('data', (data: Buffer) => {
+      childProcess.stdout.on('data', (data: Buffer) => {
         const output = data.toString();
         logStream.write(`[STDOUT] ${output}`);
 
@@ -166,7 +168,7 @@ export class AppRunner {
       });
 
       // Handle stderr
-      childProcess.stderr?.on('data', (data: Buffer) => {
+      childProcess.stderr.on('data', (data: Buffer) => {
         const output = data.toString();
         logStream.write(`[STDERR] ${output}`);
         console.log(chalk.red(`${repo}: ${output.trim()}`));
@@ -344,12 +346,10 @@ export class AppRunner {
 
     return match(command)
       .with('dev', () => [...baseCmd, 'up', '--build'])
-      .with('start', () => {
-        return match(options.environment)
+      .with('start', () => match(options.environment)
           .with('dev', () => [...baseCmd, 'up', '--build'])
           .with('prod', () => [...baseCmd, 'up', '-d'])
-          .otherwise(() => [...baseCmd, 'up']);
-      })
+          .otherwise(() => [...baseCmd, 'up']))
       .with('build', () => [...baseCmd, 'build'])
       .with('test', () => {
         const cmd = [...baseCmd, 'run', '--rm', 'app', 'npm', 'test'];
@@ -372,23 +372,17 @@ export class AppRunner {
 
   private resolveNpmCommand(command: string, options: RunOptions): string[] {
     return match(command)
-      .with('dev', () => {
-        return match(options.environment)
+      .with('dev', () => match(options.environment)
           .with('dev', () => ['npm', 'run', 'dev'])
-          .otherwise(() => ['npm', 'run', 'dev']);
-      })
-      .with('start', () => {
-        return match(options.environment)
+          .otherwise(() => ['npm', 'run', 'dev']))
+      .with('start', () => match(options.environment)
           .with('dev', () => ['npm', 'run', 'dev'])
           .with('prod', () => ['npm', 'start'])
-          .otherwise(() => ['npm', 'start']);
-      })
-      .with('build', () => {
-        return match(options.environment)
+          .otherwise(() => ['npm', 'start']))
+      .with('build', () => match(options.environment)
           .with('dev', () => ['npm', 'run', 'build:dev'])
           .with('prod', () => ['npm', 'run', 'build'])
-          .otherwise(() => ['npm', 'run', 'build']);
-      })
+          .otherwise(() => ['npm', 'run', 'build']))
       .with('test', () => {
         const baseCmd = ['npm', 'test'];
         if (options.watch) {
@@ -419,12 +413,12 @@ export class AppRunner {
   }
 
   async stopAll(): Promise<void> {
-    console.log(chalk.yellow("\n🛑 Stopping all running processes..."));
+    console.log(chalk.yellow('\n🛑 Stopping all running processes...'));
 
     const processes = Array.from(this.runningProcesses.values());
 
     if (processes.length === 0) {
-      console.log(chalk.gray("No running processes found."));
+      console.log(chalk.gray('No running processes found.'));
       return;
     }
 
@@ -451,7 +445,7 @@ export class AppRunner {
     }
 
     if (stoppedCount === 0) {
-      console.log(chalk.gray("No running processes found for specified repositories."));
+      console.log(chalk.gray('No running processes found for specified repositories.'));
     } else {
       console.log(chalk.green(`✅ Stopped ${stoppedCount} processes`));
     }
@@ -544,7 +538,7 @@ export class AppRunner {
     const processes = Array.from(this.runningProcesses.values());
 
     if (processes.length === 0) {
-      console.log(chalk.gray("No running processes found."));
+      console.log(chalk.gray('No running processes found.'));
       return;
     }
 
@@ -629,13 +623,13 @@ export class AppRunner {
   }
 
   async showStatus(): Promise<void> {
-    console.log(chalk.cyan("\n📊 Process Status"));
-    console.log(chalk.gray("═".repeat(50)));
+    console.log(chalk.cyan('\n📊 Process Status'));
+    console.log(chalk.gray('═'.repeat(50)));
 
     const processes = Array.from(this.runningProcesses.values());
 
     if (processes.length === 0) {
-      console.log(chalk.gray("No running processes."));
+      console.log(chalk.gray('No running processes.'));
       return;
     }
 
@@ -676,7 +670,7 @@ export class AppRunner {
 
     if (proc.isDockerCompose && proc.composeFile) {
       console.log(chalk.gray(`🐳 Docker Compose: ${proc.composeFile}`));
-      console.log(chalk.gray("─".repeat(50)));
+      console.log(chalk.gray('─'.repeat(50)));
 
       // For Docker Compose, show container logs
       const repoPath = join(this.workspacePath, proc.repo);
@@ -707,7 +701,7 @@ export class AppRunner {
       if (proc.dockerServices && proc.dockerServices.length > 0) {
         console.log(chalk.gray(`🐳 Services: ${proc.dockerServices.join(', ')}`));
       }
-      console.log(chalk.gray("─".repeat(50)));
+      console.log(chalk.gray('─'.repeat(50)));
 
       // Show Docker logs for npm-started services
       const repoPath = join(this.workspacePath, proc.repo);
@@ -745,7 +739,7 @@ export class AppRunner {
       }
     } else {
       console.log(chalk.gray(`Log file: ${proc.logFile}`));
-      console.log(chalk.gray("─".repeat(50)));
+      console.log(chalk.gray('─'.repeat(50)));
 
       if (follow) {
         // Follow logs in real-time
@@ -773,18 +767,18 @@ export class AppRunner {
   }
 
   async listRepositories(detailed = false): Promise<void> {
-    console.log(chalk.cyan("\n📂 Available Repositories"));
-    console.log(chalk.gray("═".repeat(50)));
+    console.log(chalk.cyan('\n📂 Available Repositories'));
+    console.log(chalk.gray('═'.repeat(50)));
 
     try {
       // Get all directories in workspace
       const entries = await fs.readdir(this.workspacePath, { withFileTypes: true });
       const repositories = entries
-        .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+        .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
         .map((entry) => entry.name);
 
       if (repositories.length === 0) {
-        console.log(chalk.yellow("No repositories found in workspace."));
+        console.log(chalk.yellow('No repositories found in workspace.'));
         console.log(chalk.gray(`Workspace path: ${this.workspacePath}`));
         return;
       }
@@ -811,7 +805,7 @@ export class AppRunner {
             console.log(chalk.gray(`   • ${proc.command} (PID: ${proc.pid}, uptime: ${uptimeStr})`));
           }
         } else {
-          console.log(chalk.gray("   Status: Stopped"));
+          console.log(chalk.gray('   Status: Stopped'));
         }
 
         if (detailed) {
@@ -826,7 +820,7 @@ export class AppRunner {
         runningProcesses.some((proc) => proc.repo === repo)
       ).length;
 
-      console.log(chalk.cyan("📊 Summary:"));
+      console.log(chalk.cyan('📊 Summary:'));
       console.log(chalk.gray(`   Total repositories: ${repositories.length}`));
       console.log(chalk.gray(`   Running: ${runningCount}`));
       console.log(chalk.gray(`   Stopped: ${repositories.length - runningCount}`));
@@ -839,27 +833,27 @@ export class AppRunner {
   private async showDetailedRepoInfo(_repo: string, repoPath: string): Promise<void> {
     try {
       // Check for package.json
-      const packageJsonPath = join(repoPath, "package.json");
+      const packageJsonPath = join(repoPath, 'package.json');
       try {
         await fs.access(packageJsonPath);
-        const packageContent = await fs.readFile(packageJsonPath, "utf-8");
+        const packageContent = await fs.readFile(packageJsonPath, 'utf-8');
         const packageJson = JSON.parse(packageContent);
 
-        console.log(chalk.gray(`   Description: ${packageJson.description || "No description"}`));
-        console.log(chalk.gray(`   Version: ${packageJson.version || "Unknown"}`));
+        console.log(chalk.gray(`   Description: ${packageJson.description || 'No description'}`));
+        console.log(chalk.gray(`   Version: ${packageJson.version || 'Unknown'}`));
 
         // Show available scripts
         if (packageJson.scripts) {
           const scripts = Object.keys(packageJson.scripts);
           const commonScripts = scripts.filter((script) =>
-            ["dev", "start", "build", "test", "lint"].includes(script)
+            ['dev', 'start', 'build', 'test', 'lint'].includes(script)
           );
           if (commonScripts.length > 0) {
-            console.log(chalk.gray(`   Scripts: ${commonScripts.join(", ")}`));
+            console.log(chalk.gray(`   Scripts: ${commonScripts.join(', ')}`));
           }
         }
       } catch {
-        console.log(chalk.gray("   Type: Non-Node.js project"));
+        console.log(chalk.gray('   Type: Non-Node.js project'));
       }
 
       // Check for Docker Compose
@@ -870,10 +864,10 @@ export class AppRunner {
 
       // Check for Git
       try {
-        await fs.access(join(repoPath, ".git"));
-        console.log(chalk.gray("   📋 Git repository"));
+        await fs.access(join(repoPath, '.git'));
+        console.log(chalk.gray('   📋 Git repository'));
       } catch {
-        console.log(chalk.gray("   📋 Not a Git repository"));
+        console.log(chalk.gray('   📋 Not a Git repository'));
       }
 
     } catch (error) {

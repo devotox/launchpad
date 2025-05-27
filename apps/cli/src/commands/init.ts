@@ -1,25 +1,26 @@
-import { ConfigManager, DataManager } from "@/utils/config";
-import { RepositoryManager } from "@/utils/repository";
-import chalk from "chalk";
-import { Command } from "commander";
-import inquirer from "inquirer";
+import chalk from 'chalk';
+import { Command } from 'commander';
+import inquirer from 'inquirer';
 
-interface InitAnswers {
+import { ConfigManager, DataManager } from '@/utils/config';
+import { RepositoryManager } from '@/utils/repository';
+
+type InitAnswers = {
   name: string;
   email: string;
   team: string;
   workspaceName: string;
   workspacePath: string;
   cloneRepos: boolean;
-  cloneType?: "required" | "all";
+  cloneType?: 'required' | 'all';
   setupDependencies?: boolean;
 }
 
 export class InitCommand {
   getCommand(): Command {
-    return new Command("init")
-      .description("Initialize your developer workspace")
-      .option("--force", "Force re-initialization even if config exists")
+    return new Command('init')
+      .description('Initialize your developer workspace')
+      .option('--force', 'Force re-initialization even if config exists')
       .action(async (options) => {
         await this.execute(options.force);
       });
@@ -32,32 +33,32 @@ export class InitCommand {
     // Check if config already exists
     if (!force && (await configManager.hasConfig())) {
       const existingConfig = await configManager.getConfig();
-      console.log(chalk.yellow("⚠️  Launchpad is already initialized!"));
+      console.log(chalk.yellow('⚠️  Launchpad is already initialized!'));
       console.log(chalk.gray(`Config found at: ${configManager.getConfigPath()}`));
       console.log(chalk.gray(`Current team: ${existingConfig?.user.team}`));
-      console.log(chalk.gray("Use --force to re-initialize"));
+      console.log(chalk.gray('Use --force to re-initialize'));
       return;
     }
 
-    console.log(chalk.cyan("🚀 Welcome to LoveHolidays Launchpad!"));
+    console.log(chalk.cyan('🚀 Welcome to LoveHolidays Launchpad!'));
     console.log(chalk.gray("Let's set up your developer workspace...\n"));
 
     const teamChoices = await dataManager.getTeamChoices();
 
     const answers = await inquirer.prompt<InitAnswers>([
       {
-        type: "input",
-        name: "name",
+        type: 'input',
+        name: 'name',
         message: "What's your name?",
-        validate: (input: string) => input.length > 0 || "Please enter your name",
+        validate: (input: string) => input.length > 0 || 'Please enter your name'
       },
       {
-        type: "input",
-        name: "email",
+        type: 'input',
+        name: 'email',
         message: "What's your email address?",
         default: (answers: Partial<InitAnswers>) => {
           const name = answers.name?.toLowerCase().trim();
-          if (!name) return "";
+          if (!name) return '';
           const nameParts = name.split(/\s+/);
           if (nameParts.length >= 2) {
             return `${nameParts[0]}.${nameParts[nameParts.length - 1]}@loveholidays.com`;
@@ -66,64 +67,64 @@ export class InitCommand {
         },
         validate: (input: string) => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          return emailRegex.test(input) || "Please enter a valid email address";
-        },
+          return emailRegex.test(input) || 'Please enter a valid email address';
+        }
       },
       {
-        type: "list",
-        name: "team",
-        message: "Which team are you joining?",
-        choices: teamChoices,
+        type: 'list',
+        name: 'team',
+        message: 'Which team are you joining?',
+        choices: teamChoices
       },
       {
-        type: "input",
-        name: "workspaceName",
-        message: "What would you like to name your workspace?",
+        type: 'input',
+        name: 'workspaceName',
+        message: 'What would you like to name your workspace?',
         default: (answers: Partial<InitAnswers>) => {
           const emailParts = answers.email?.split('@') || [];
           const emailDomain = emailParts.length > 1 ? emailParts[1] : null;
           return emailDomain ? (emailDomain.split('.')[0] || 'workspace') : 'workspace';
         },
-        validate: (input: string) => input.length > 0 || "Please enter a workspace name",
+        validate: (input: string) => input.length > 0 || 'Please enter a workspace name'
       },
       {
-        type: "input",
-        name: "workspacePath",
-        message: "Where would you like to create your workspace?",
+        type: 'input',
+        name: 'workspacePath',
+        message: 'Where would you like to create your workspace?',
         default: (answers: Partial<InitAnswers>) =>
-          `${process.env["HOME"]}/Documents/${answers.workspaceName || 'workspace'}`,
-        validate: (input: string) => input.length > 0 || "Please enter a workspace path",
+          `${process.env['HOME']}/Documents/${answers.workspaceName || 'workspace'}`,
+        validate: (input: string) => input.length > 0 || 'Please enter a workspace path'
       },
       {
-        type: "confirm",
-        name: "cloneRepos",
+        type: 'confirm',
+        name: 'cloneRepos',
         message: "Would you like to clone your team's repositories?",
-        default: true,
+        default: true
       },
       {
-        type: "list",
-        name: "cloneType",
-        message: "Which repositories would you like to clone?",
+        type: 'list',
+        name: 'cloneType',
+        message: 'Which repositories would you like to clone?',
         choices: [
-          { name: "Required repositories only (recommended)", value: "required" },
-          { name: "All team repositories", value: "all" },
+          { name: 'Required repositories only (recommended)', value: 'required' },
+          { name: 'All team repositories', value: 'all' }
         ],
-        when: (answers) => answers.cloneRepos,
+        when: (answers) => answers.cloneRepos
       },
       {
-        type: "confirm",
-        name: "setupDependencies",
-        message: "Would you like to automatically install dependencies?",
+        type: 'confirm',
+        name: 'setupDependencies',
+        message: 'Would you like to automatically install dependencies?',
         default: true,
-        when: (answers) => answers.cloneRepos,
-      },
+        when: (answers) => answers.cloneRepos
+      }
     ]);
 
     // Create config
     const config = await configManager.createDefaultConfig({
       name: answers.name,
       email: answers.email,
-      team: answers.team,
+      team: answers.team
     }, answers.workspaceName);
 
     // Update workspace path
@@ -131,22 +132,22 @@ export class InitCommand {
       workspace: {
         name: answers.workspaceName,
         path: answers.workspacePath,
-        repositories: [],
+        repositories: []
       },
       preferences: {
         ...config.preferences,
         autoClone: answers.cloneRepos,
-        setupDependencies: answers.setupDependencies || false,
-      },
+        setupDependencies: answers.setupDependencies || false
+      }
     });
 
-    console.log(chalk.green("\n✅ Configuration saved successfully!"));
+    console.log(chalk.green('\n✅ Configuration saved successfully!'));
     console.log(chalk.gray(`Config location: ${configManager.getConfigPath()}`));
 
     // Get team information
     const team = await dataManager.getTeamById(answers.team);
     if (!team) {
-      console.error(chalk.red("❌ Team not found"));
+      console.error(chalk.red('❌ Team not found'));
       return;
     }
 
@@ -162,10 +163,10 @@ export class InitCommand {
     if (team.slackChannels.social) {
       console.log(chalk.gray(`Social channel: ${team.slackChannels.social}`));
     }
-    console.log(chalk.gray(`Tools: ${team.tools.join(", ")}`));
+    console.log(chalk.gray(`Tools: ${team.tools.join(', ')}`));
     console.log(chalk.gray(`Default branch: ${team.config.defaultBranch}`));
     console.log(chalk.gray(`CI/CD: ${team.config.cicdPipeline}`));
-    console.log(chalk.gray(`Monitoring: ${team.config.monitoringTools.join(", ")}`));
+    console.log(chalk.gray(`Monitoring: ${team.config.monitoringTools.join(', ')}`));
     if (team.config.communicationPreferences.standupTime) {
       console.log(
         chalk.gray(
@@ -177,7 +178,7 @@ export class InitCommand {
     // Clone repositories if requested
     if (answers.cloneRepos) {
       const repoManager = new RepositoryManager(answers.workspacePath);
-      const onlyRequired = answers.cloneType === "required";
+      const onlyRequired = answers.cloneType === 'required';
 
       const clonedRepos = await repoManager.cloneRepositories(team.repositories, onlyRequired);
 
@@ -186,8 +187,8 @@ export class InitCommand {
         workspace: {
           name: answers.workspaceName,
           path: answers.workspacePath,
-          repositories: clonedRepos,
-        },
+          repositories: clonedRepos
+        }
       });
 
       // Setup dependencies if requested
@@ -199,7 +200,7 @@ export class InitCommand {
     }
 
     // Show onboarding resources
-    console.log(chalk.cyan("\n📚 Essential Onboarding Resources:"));
+    console.log(chalk.cyan('\n📚 Essential Onboarding Resources:'));
     const onboardingDocs = await dataManager.getAllOnboardingDocs(team.id);
     onboardingDocs.forEach((doc: string, index: number) => {
       if (index === 0) {
@@ -210,17 +211,17 @@ export class InitCommand {
       }
     });
 
-    console.log(chalk.cyan("\n🎯 Next Steps:"));
-    console.log(chalk.green("  1. 📖 Start with the MMB Team Onboarding Guide (link above)"));
+    console.log(chalk.cyan('\n🎯 Next Steps:'));
+    console.log(chalk.green('  1. 📖 Start with the MMB Team Onboarding Guide (link above)'));
     console.log(chalk.gray("  2. Join your team's Slack channels"));
-    console.log(chalk.gray("  3. Set up your development environment"));
+    console.log(chalk.gray('  3. Set up your development environment'));
     if (answers.cloneRepos) {
       console.log(chalk.gray(`  4. Navigate to your workspace: cd ${answers.workspacePath}`));
-      console.log(chalk.gray("  5. Explore the codebase and run the applications"));
+      console.log(chalk.gray('  5. Explore the codebase and run the applications'));
     } else {
       console.log(chalk.gray('  4. Run "launchpad create project" to start a new project'));
     }
-    console.log(chalk.gray("  6. Attend your first team standup"));
+    console.log(chalk.gray('  6. Attend your first team standup'));
 
     console.log(chalk.green(`\nWelcome to LoveHolidays, ${answers.name}! 🎉`));
     console.log(

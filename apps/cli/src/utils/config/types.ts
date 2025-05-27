@@ -1,6 +1,6 @@
-import type { Team, SetupComponent } from "@/utils/config/data";
+import type { Team, SetupComponent } from '@/utils/config/data';
 
-export interface LaunchpadConfig {
+export type LaunchpadConfig = {
   user: {
     name: string;
     email: string;
@@ -31,7 +31,7 @@ export interface LaunchpadConfig {
   lastUpdated: string;
 }
 
-export interface SyncConfig {
+export type SyncConfig = {
   defaultProvider: 'gist' | 'github' | 'googledrive' | 'local';
   providers: {
     github?: {
@@ -62,7 +62,7 @@ export interface SyncConfig {
   lastSync?: string;
 }
 
-export interface ConfigPaths {
+export type ConfigPaths = {
   configDir: string;
   configFile: string;
   syncConfigFile: string;
@@ -70,12 +70,12 @@ export interface ConfigPaths {
   cacheDir: string;
 }
 
-export interface ConfigOptions {
+export type ConfigOptions = {
   useXDGConfig?: boolean;
   customConfigDir?: string;
 }
 
-export interface ConfigSyncOptions {
+export type ConfigSyncOptions = {
   provider: 'gist' | 'github' | 'googledrive' | 'local';
   repository?: string; // For GitHub: "org/repo"
   branch?: string; // For GitHub: default "main"
@@ -86,7 +86,7 @@ export interface ConfigSyncOptions {
   localPath?: string; // For local: file system path
 }
 
-export interface ConfigBundle {
+export type ConfigBundle = {
   version: string;
   timestamp: string;
   teams: Team[];

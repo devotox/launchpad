@@ -1,9 +1,12 @@
-import { promises as fs } from "node:fs";
-import { join } from "node:path";
-import chalk from "chalk";
-import type { Team, SetupComponent } from "@/utils/config/data";
-import type { ConfigBundle } from "@/utils/config/types";
-import { getConfigDirectory } from "@/utils/config/paths";
+import { promises as fs } from 'node:fs';
+import { join } from 'node:path';
+
+import chalk from 'chalk';
+
+import { getConfigDirectory } from '@/utils/config/paths';
+
+import type { Team, SetupComponent } from '@/utils/config/data';
+import type { ConfigBundle } from '@/utils/config/types';
 
 export class DataManager {
   private static instance: DataManager;
@@ -14,9 +17,9 @@ export class DataManager {
 
   private constructor() {
     this.configDir = getConfigDirectory();
-    this.teamsFile = join(this.configDir, "teams.json");
-    this.setupComponentsFile = join(this.configDir, "setup-components.json");
-    this.globalDocsFile = join(this.configDir, "global-docs.json");
+    this.teamsFile = join(this.configDir, 'teams.json');
+    this.setupComponentsFile = join(this.configDir, 'setup-components.json');
+    this.globalDocsFile = join(this.configDir, 'global-docs.json');
   }
 
   static getInstance(): DataManager {
@@ -55,18 +58,18 @@ export class DataManager {
   async getTeams(): Promise<Team[]> {
     await this.ensureDataFiles();
     try {
-      const content = await fs.readFile(this.teamsFile, "utf-8");
+      const content = await fs.readFile(this.teamsFile, 'utf-8');
       const parsed = JSON.parse(content);
 
       // Type validation
       if (!Array.isArray(parsed)) {
-        console.warn("teams.json is not an array, returning empty array");
+        console.warn('teams.json is not an array, returning empty array');
         return [];
       }
 
       return parsed as Team[];
     } catch (error) {
-      console.warn("Failed to read teams.json:", error);
+      console.warn('Failed to read teams.json:', error);
       return [];
     }
   }
@@ -74,18 +77,18 @@ export class DataManager {
   async getSetupComponents(): Promise<SetupComponent[]> {
     await this.ensureDataFiles();
     try {
-      const content = await fs.readFile(this.setupComponentsFile, "utf-8");
+      const content = await fs.readFile(this.setupComponentsFile, 'utf-8');
       const parsed = JSON.parse(content);
 
       // Type validation
       if (!Array.isArray(parsed)) {
-        console.warn("setup-components.json is not an array, returning empty array");
+        console.warn('setup-components.json is not an array, returning empty array');
         return [];
       }
 
       return parsed as SetupComponent[];
     } catch (error) {
-      console.warn("Failed to read setup-components.json:", error);
+      console.warn('Failed to read setup-components.json:', error);
       return [];
     }
   }
@@ -93,18 +96,18 @@ export class DataManager {
   async getGlobalOnboardingDocs(): Promise<string[]> {
     await this.ensureDataFiles();
     try {
-      const content = await fs.readFile(this.globalDocsFile, "utf-8");
+      const content = await fs.readFile(this.globalDocsFile, 'utf-8');
       const parsed = JSON.parse(content);
 
       // Type validation
       if (!Array.isArray(parsed)) {
-        console.warn("global-docs.json is not an array, returning empty array");
+        console.warn('global-docs.json is not an array, returning empty array');
         return [];
       }
 
       return parsed as string[];
     } catch (error) {
-      console.warn("Failed to read global-docs.json:", error);
+      console.warn('Failed to read global-docs.json:', error);
       return [];
     }
   }
@@ -130,11 +133,11 @@ export class DataManager {
     return teams.find((team) => team.id === id);
   }
 
-  async getTeamChoices(): Promise<Array<{ name: string; value: string }>> {
+  async getTeamChoices(): Promise<{ name: string; value: string }[]> {
     const teams = await this.getTeams();
     return teams.map((team) => ({
       name: `${team.name} - ${team.description}`,
-      value: team.id,
+      value: team.id
     }));
   }
 
@@ -181,12 +184,12 @@ export class DataManager {
     return components.find((component) => component.id === id);
   }
 
-  async getSetupComponentsByPlatform(platform: "macos" | "windows" | "linux"): Promise<SetupComponent[]> {
+  async getSetupComponentsByPlatform(platform: 'macos' | 'windows' | 'linux'): Promise<SetupComponent[]> {
     const components = await this.getSetupComponents();
     return components.filter((component) => component.platforms.includes(platform));
   }
 
-  async getSetupComponentsByCategory(category: SetupComponent["category"]): Promise<SetupComponent[]> {
+  async getSetupComponentsByCategory(category: SetupComponent['category']): Promise<SetupComponent[]> {
     const components = await this.getSetupComponents();
     return components.filter((component) => component.category === category);
   }
@@ -225,14 +228,14 @@ export class DataManager {
     const globalDocs = await this.getGlobalOnboardingDocs();
 
     return {
-      version: "1.0.0",
+      version: '1.0.0',
       timestamp: new Date().toISOString(),
       teams,
       setupComponents,
       globalDocs,
       metadata: {
-        source: "launchpad-cli",
-        description: "Launchpad configuration bundle"
+        source: 'launchpad-cli',
+        description: 'Launchpad configuration bundle'
       }
     };
   }
@@ -240,7 +243,7 @@ export class DataManager {
   async importConfigBundle(bundle: ConfigBundle): Promise<void> {
     // Validate bundle structure
     if (!bundle.teams || !bundle.setupComponents || !bundle.globalDocs) {
-      throw new Error("Invalid config bundle: missing required data");
+      throw new Error('Invalid config bundle: missing required data');
     }
 
     // Backup existing data
@@ -262,7 +265,7 @@ export class DataManager {
     await fs.writeFile(this.setupComponentsFile, JSON.stringify(bundle.setupComponents, null, 2));
     await fs.writeFile(this.globalDocsFile, JSON.stringify(bundle.globalDocs, null, 2));
 
-    console.log("✅ Config bundle imported successfully");
+    console.log('✅ Config bundle imported successfully');
     console.log(`📁 Backup created at: ${backupDir}`);
   }
 
@@ -298,9 +301,7 @@ export class DataManager {
       }
 
       const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      const bundle = JSON.parse(content) as ConfigBundle;
-
-      return bundle;
+      return JSON.parse(content) as ConfigBundle;
     } catch (error) {
       throw new Error(`Failed to download config from GitHub: ${error}`);
     }
@@ -377,7 +378,9 @@ export class DataManager {
   }): Promise<ConfigBundle> {
     const { gistId, fileName = 'launchpad-config.json', token } = options;
 
-    const url = `https://api.github.com/gists/${gistId}`;
+    // Extract just the gist ID if full URL or username/gistId format is provided
+    const actualGistId = this.extractGistId(gistId);
+    const url = `https://api.github.com/gists/${actualGistId}`;
     const headers: Record<string, string> = {
       'Accept': 'application/vnd.github.v3+json',
       'User-Agent': 'launchpad-cli'
@@ -391,7 +394,25 @@ export class DataManager {
       const response = await fetch(url, { headers });
 
       if (!response.ok) {
-        throw new Error(`GitHub Gist API error: ${response.status} ${response.statusText}`);
+        let errorMessage = `GitHub Gist API error: ${response.status} ${response.statusText}`;
+
+        if (response.status === 404) {
+          errorMessage = `Gist not found (404). This could mean:
+  • The gist ID '${gistId}' doesn't exist
+  • The gist is private and you don't have access
+  • Your token doesn't have the required permissions (needs 'gist' scope)`;
+        } else if (response.status === 401) {
+          errorMessage = `Authentication failed (401). Check your GitHub token:
+  • Make sure the token is valid
+  • Ensure it has 'gist' scope for private gists
+  • Token may have expired`;
+        } else if (response.status === 403) {
+          errorMessage = `Access forbidden (403). Your token may not have the required permissions:
+  • Add 'gist' scope to your token for private gists
+  • Check if the gist owner has restricted access`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       const gistData = await response.json() as {
@@ -407,8 +428,7 @@ export class DataManager {
         throw new Error('Gist file is truncated. Please use a smaller config file or GitHub repository instead.');
       }
 
-      const bundle = JSON.parse(file.content) as ConfigBundle;
-      return bundle;
+      return JSON.parse(file.content) as ConfigBundle;
     } catch (error) {
       throw new Error(`Failed to download config from GitHub Gist: ${error}`);
     }
@@ -441,7 +461,8 @@ export class DataManager {
     try {
       if (gistId) {
         // Update existing gist
-        const url = `https://api.github.com/gists/${gistId}`;
+        const actualGistId = this.extractGistId(gistId);
+        const url = `https://api.github.com/gists/${actualGistId}`;
         const body = {
           description,
           files: {
@@ -459,7 +480,17 @@ export class DataManager {
 
         if (!response.ok) {
           const errorData = await response.json() as { message?: string };
-          throw new Error(`GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`);
+          let errorMessage = `GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`;
+
+          if (response.status === 404) {
+            errorMessage = `Gist not found (404). The gist ID '${gistId}' may not exist or you don't have access to it.`;
+          } else if (response.status === 401) {
+            errorMessage = "Authentication failed (401). Check your GitHub token and ensure it has 'gist' scope.";
+          } else if (response.status === 403) {
+            errorMessage = 'Access forbidden (403). Your token may not have permission to modify this gist.';
+          }
+
+          throw new Error(errorMessage);
         }
 
         const responseData = await response.json() as { id: string; html_url: string };
@@ -492,7 +523,17 @@ export class DataManager {
 
       if (!response.ok) {
         const errorData = await response.json() as { message?: string };
-        throw new Error(`GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`);
+        let errorMessage = `GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`;
+
+        if (response.status === 401) {
+          errorMessage = "Authentication failed (401). Check your GitHub token and ensure it has 'gist' scope.";
+        } else if (response.status === 403) {
+          errorMessage = 'Access forbidden (403). Your token may not have permission to create gists.';
+        } else if (response.status === 422) {
+          errorMessage = 'Invalid request (422). Check your gist content and try again.';
+        }
+
+        throw new Error(errorMessage);
       }
 
       const responseData = await response.json() as { id: string; html_url: string };
@@ -509,26 +550,51 @@ export class DataManager {
     }
   }
 
+      private extractGistId(gistInput: string): string {
+    // Handle different gist input formats:
+    // 1. Full URL: https://gist.github.com/username/gistId
+    // 2. Username/gistId format: username/gistId
+    // 3. Just gistId: gistId
+
+    if (gistInput.includes('gist.github.com/')) {
+      // Extract from full URL
+      const match = gistInput.match(/gist\.github\.com\/[^/]+\/([a-f0-9]+)/);
+      if (match?.[1]) {
+        return match[1];
+      }
+      return gistInput;
+    }
+
+    if (gistInput.includes('/')) {
+      // Extract from username/gistId format - take everything after the last slash
+      const lastSlashIndex = gistInput.lastIndexOf('/');
+      return gistInput.substring(lastSlashIndex + 1);
+    }
+
+    // Already just the gist ID
+    return gistInput;
+  }
+
   private async saveGistConfig(gistId: string, fileName: string, token: string, description: string): Promise<void> {
     try {
       // Import ConfigManager to save the gist configuration
-      const { ConfigManager } = await import("@/utils/config/manager");
+      const { ConfigManager } = await import('@/utils/config/manager');
       const configManager = ConfigManager.getInstance();
 
-      await configManager.setSyncProvider("gist", {
+      await configManager.setSyncProvider('gist', {
         gistId,
         fileName,
         token,
-        description,
+        description
       });
 
       // Set gist as default provider if no default is set
       const syncConfig = await configManager.getSyncConfig();
       if (!syncConfig || !syncConfig.defaultProvider) {
-        await configManager.setDefaultSyncProvider("gist");
+        await configManager.setDefaultSyncProvider('gist');
       }
 
-      console.log(chalk.green("💾 Gist configuration saved for future use"));
+      console.log(chalk.green('💾 Gist configuration saved for future use'));
     } catch (error) {
       console.warn(chalk.yellow(`⚠️  Could not save gist configuration: ${error}`));
     }
@@ -560,12 +626,12 @@ export class DataManager {
     }
 
     const backupData = {
-      version: "1.0.0",
+      version: '1.0.0',
       timestamp: new Date().toISOString(),
       configType,
       data,
       metadata: {
-        source: "launchpad-cli",
+        source: 'launchpad-cli',
         sourceFile,
         description: `Backup of ${configType} configuration`
       }
@@ -633,7 +699,7 @@ export class DataManager {
     console.log(`✅ ${configType} configuration restored successfully`);
   }
 
-  async listBackups(backupDir?: string): Promise<Array<{ path: string; type: string; timestamp: string; size: number }>> {
+  async listBackups(backupDir?: string): Promise<{ path: string; type: string; timestamp: string; size: number }[]> {
     const searchDir = backupDir || join(this.configDir, 'backups');
 
     try {
@@ -642,7 +708,7 @@ export class DataManager {
       return [];
     }
 
-    const backups: Array<{ path: string; type: string; timestamp: string; size: number }> = [];
+    const backups: { path: string; type: string; timestamp: string; size: number }[] = [];
 
     const entries = await fs.readdir(searchDir, { withFileTypes: true });
 
