@@ -104,11 +104,13 @@ export class AdminCommand {
     configCmd
       .command("download")
       .description("Download configuration from remote source")
-      .option("--provider <provider>", "Provider (github, local)", "github")
+      .option("--provider <provider>", "Provider (gist, github, local)", "gist")
       .option("--repository <repo>", "GitHub repository (org/repo)")
       .option("--branch <branch>", "Git branch", "main")
       .option("--token <token>", "GitHub personal access token")
       .option("--path <path>", "File path in repository", "launchpad-config.json")
+      .option("--gist-id <gistId>", "GitHub Gist ID")
+      .option("--file-name <fileName>", "File name in gist", "launchpad-config.json")
       .option("--local-path <path>", "Local file path for local provider")
       .action(async (options) => {
         await this.downloadConfig(options);
@@ -117,12 +119,15 @@ export class AdminCommand {
     configCmd
       .command("upload")
       .description("Upload current configuration to remote source")
-      .option("--provider <provider>", "Provider (github, local)", "github")
+      .option("--provider <provider>", "Provider (gist, github, local)", "gist")
       .option("--repository <repo>", "GitHub repository (org/repo)")
       .option("--branch <branch>", "Git branch", "main")
       .option("--token <token>", "GitHub personal access token")
       .option("--path <path>", "File path in repository", "launchpad-config.json")
       .option("--message <message>", "Commit message")
+      .option("--gist-id <gistId>", "GitHub Gist ID (for updates)")
+      .option("--file-name <fileName>", "File name in gist", "launchpad-config.json")
+      .option("--description <description>", "Gist description")
       .option("--local-path <path>", "Local file path for local provider")
       .action(async (options) => {
         await this.uploadConfig(options);
@@ -599,6 +604,8 @@ export class AdminCommand {
     branch?: string;
     token?: string;
     path?: string;
+    gistId?: string;
+    fileName?: string;
     localPath?: string;
   }): Promise<void> {
     const dataManager = DataManager.getInstance();
@@ -612,7 +619,7 @@ export class AdminCommand {
       let configToUse = { ...options };
 
       // If no specific options provided, try to use stored sync config
-      if (providerToUse === "github" && !options.repository) {
+      if ((providerToUse === "github" && !options.repository) || (providerToUse === "gist" && !options.gistId) || providerToUse === "gist") {
         const syncConfig = await configManager.getSyncConfig();
         if (syncConfig) {
           providerToUse = syncConfig.defaultProvider;
@@ -626,6 +633,15 @@ export class AdminCommand {
               branch: githubConfig.branch,
               token: githubConfig.token,
               path: githubConfig.path,
+            };
+            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+          } else if (providerToUse === "gist" && providerConfig) {
+            const gistConfig = providerConfig as any;
+            configToUse = {
+              ...configToUse,
+              gistId: gistConfig.gistId,
+              fileName: gistConfig.fileName,
+              token: gistConfig.token,
             };
             console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
           } else if (providerToUse === "local" && providerConfig) {
@@ -652,6 +668,20 @@ export class AdminCommand {
           branch: configToUse.branch,
           token: configToUse.token,
           path: configToUse.path,
+        });
+      } else if (providerToUse === "gist") {
+        if (!configToUse.gistId) {
+          console.log(chalk.red("❌ No GitHub Gist configured"));
+          console.log(chalk.gray("To download from a specific gist: --gist-id abc123def456"));
+          console.log(chalk.gray("To configure a default gist: launchpad admin config providers:add"));
+          console.log(chalk.gray("To upload and create a new gist: launchpad admin config upload"));
+          return;
+        }
+
+        bundle = await dataManager.downloadConfigFromGist({
+          gistId: configToUse.gistId,
+          fileName: configToUse.fileName,
+          token: configToUse.token,
         });
       } else if (providerToUse === "local") {
         if (!configToUse.localPath) {
@@ -709,6 +739,9 @@ export class AdminCommand {
     token?: string;
     path?: string;
     message?: string;
+    gistId?: string;
+    fileName?: string;
+    description?: string;
     localPath?: string;
   }): Promise<void> {
     const dataManager = DataManager.getInstance();
@@ -728,7 +761,7 @@ export class AdminCommand {
       let configToUse = { ...options };
 
       // If no specific options provided, try to use stored sync config
-      if (providerToUse === "github" && !options.repository) {
+      if ((providerToUse === "github" && !options.repository) || (providerToUse === "gist" && !options.gistId) || providerToUse === "gist") {
         const syncConfig = await configManager.getSyncConfig();
         if (syncConfig) {
           providerToUse = syncConfig.defaultProvider;
@@ -742,6 +775,16 @@ export class AdminCommand {
               branch: githubConfig.branch,
               token: githubConfig.token,
               path: githubConfig.path,
+            };
+            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+          } else if (providerToUse === "gist" && providerConfig) {
+            const gistConfig = providerConfig as any;
+            configToUse = {
+              ...configToUse,
+              gistId: gistConfig.gistId,
+              fileName: gistConfig.fileName,
+              token: gistConfig.token,
+              description: gistConfig.description,
             };
             console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
           } else if (providerToUse === "local" && providerConfig) {
@@ -777,6 +820,37 @@ export class AdminCommand {
           path: configToUse.path,
           message: configToUse.message,
         });
+      } else if (providerToUse === "gist") {
+        if (!configToUse.token) {
+          console.log(chalk.red("❌ GitHub token is required for Gist uploads"));
+          console.log(chalk.gray("Create a token at: https://github.com/settings/tokens"));
+          console.log(chalk.gray("Then use: --token YOUR_TOKEN"));
+          console.log(chalk.gray("Or configure it permanently: launchpad admin config providers:add"));
+          return;
+        }
+
+        const resultGistId = await dataManager.uploadConfigToGist(bundle, {
+          gistId: configToUse.gistId,
+          fileName: configToUse.fileName,
+          token: configToUse.token,
+          description: configToUse.description,
+          saveConfig: !configToUse.gistId, // Save config when creating new gist
+        });
+
+        // If we created a new gist and don't have stored config, save it
+        if (!configToUse.gistId && resultGistId) {
+          const syncConfig = await configManager.getSyncConfig();
+          if (!syncConfig?.providers.gist) {
+            console.log(chalk.cyan("🔧 Setting up Gist as your default sync provider..."));
+            await configManager.setSyncProvider("gist", {
+              gistId: resultGistId,
+              fileName: configToUse.fileName || 'launchpad-config.json',
+              token: configToUse.token,
+              description: configToUse.description || 'Launchpad configuration',
+            });
+            await configManager.setDefaultSyncProvider("gist");
+          }
+        }
       } else if (providerToUse === "local") {
         if (!configToUse.localPath) {
           console.log(chalk.red("❌ Local path is required for local provider"));
@@ -972,8 +1046,9 @@ export class AdminCommand {
         name: "defaultProvider",
         message: "Choose your default sync provider:",
         choices: [
-          { name: "Local (file system backup)", value: "local" },
+          { name: "GitHub Gist (simple file sharing) - Recommended", value: "gist" },
           { name: "GitHub (repository sync)", value: "github" },
+          { name: "Local (file system backup)", value: "local" },
           { name: "Google Drive (cloud storage)", value: "googledrive" },
         ],
       },
@@ -1047,6 +1122,7 @@ export class AdminCommand {
         name: "provider",
         message: "Select provider type:",
         choices: [
+          { name: "GitHub Gist (Recommended)", value: "gist" },
           { name: "GitHub Repository", value: "github" },
           { name: "Google Drive", value: "googledrive" },
           { name: "Local File System", value: "local" },
@@ -1092,6 +1168,41 @@ export class AdminCommand {
       });
 
       console.log(chalk.green("✅ GitHub provider configured successfully!"));
+    } else if (provider === "gist") {
+      const gistConfig = await inquirer.prompt([
+        {
+          type: "input",
+          name: "gistId",
+          message: "GitHub Gist ID (leave empty to create new gist when uploading):",
+        },
+        {
+          type: "input",
+          name: "fileName",
+          message: "File name in gist:",
+          default: "launchpad-config.json",
+        },
+        {
+          type: "input",
+          name: "description",
+          message: "Gist description:",
+          default: "Launchpad configuration",
+        },
+        {
+          type: "password",
+          name: "token",
+          message: "GitHub personal access token:",
+          validate: (input: string) => input.length > 0 || "Token is required for Gist operations",
+        },
+      ]);
+
+      await configManager.setSyncProvider("gist", {
+        gistId: gistConfig.gistId || "",
+        fileName: gistConfig.fileName,
+        description: gistConfig.description,
+        token: gistConfig.token,
+      });
+
+      console.log(chalk.green("✅ GitHub Gist provider configured successfully!"));
     } else if (provider === "googledrive") {
       const driveConfig = await inquirer.prompt([
         {
@@ -1180,6 +1291,12 @@ export class AdminCommand {
         console.log(chalk.gray(`  Branch: ${githubConfig.branch}`));
         console.log(chalk.gray(`  Path: ${githubConfig.path}`));
         console.log(chalk.gray(`  Token: ${githubConfig.token ? "Configured" : "Not set"}`));
+      } else if (name === "gist" && config) {
+        const gistConfig = config as any;
+        console.log(chalk.gray(`  Gist ID: ${gistConfig.gistId || "Will create new"}`));
+        console.log(chalk.gray(`  File name: ${gistConfig.fileName}`));
+        console.log(chalk.gray(`  Description: ${gistConfig.description}`));
+        console.log(chalk.gray(`  Token: ${gistConfig.token ? "Configured" : "Not set"}`));
       } else if (name === "googledrive" && config) {
         const driveConfig = config as any;
         console.log(chalk.gray(`  Folder ID: ${driveConfig.folderId}`));

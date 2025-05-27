@@ -242,7 +242,7 @@ export class ConfigManager {
   async updateSyncConfig(updates: Partial<SyncConfig>): Promise<void> {
     const currentSync = await this.getSyncConfig();
     const updatedSync: SyncConfig = {
-      defaultProvider: 'local',
+      defaultProvider: 'gist',
       providers: {
         ...currentSync?.providers,
         ...updates.providers,
@@ -257,7 +257,7 @@ export class ConfigManager {
 
   async createDefaultSyncConfig(): Promise<SyncConfig> {
     const defaultSync: SyncConfig = {
-      defaultProvider: 'local',
+      defaultProvider: 'gist',
       providers: {
         local: {
           path: this.configPaths.configDir,

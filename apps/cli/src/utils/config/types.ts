@@ -32,13 +32,19 @@ export interface LaunchpadConfig {
 }
 
 export interface SyncConfig {
-  defaultProvider: 'github' | 'googledrive' | 'local';
+  defaultProvider: 'gist' | 'github' | 'googledrive' | 'local';
   providers: {
     github?: {
       repository: string;
       branch: string;
       token?: string;
       path: string;
+    };
+    gist?: {
+      gistId: string;
+      fileName: string;
+      token?: string;
+      description?: string;
     };
     googledrive?: {
       folderId: string;
@@ -70,10 +76,12 @@ export interface ConfigOptions {
 }
 
 export interface ConfigSyncOptions {
-  provider: 'github' | 'googledrive' | 'local';
+  provider: 'gist' | 'github' | 'googledrive' | 'local';
   repository?: string; // For GitHub: "org/repo"
   branch?: string; // For GitHub: default "main"
   token?: string; // For GitHub: personal access token
+  gistId?: string; // For GitHub Gist: gist ID
+  fileName?: string; // For GitHub Gist: file name in gist
   driveFolder?: string; // For Google Drive: folder ID
   localPath?: string; // For local: file system path
 }

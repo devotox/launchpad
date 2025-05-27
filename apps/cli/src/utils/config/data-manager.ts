@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
+import chalk from "chalk";
 import type { Team, SetupComponent } from "@/utils/config/data";
 import type { ConfigBundle } from "@/utils/config/types";
 import { getConfigDirectory } from "@/utils/config/paths";
@@ -366,6 +367,170 @@ export class DataManager {
       console.log(`✅ Config uploaded to GitHub: ${repository}/${path}`);
     } catch (error) {
       throw new Error(`Failed to upload config to GitHub: ${error}`);
+    }
+  }
+
+  async downloadConfigFromGist(options: {
+    gistId: string;
+    fileName?: string;
+    token?: string;
+  }): Promise<ConfigBundle> {
+    const { gistId, fileName = 'launchpad-config.json', token } = options;
+
+    const url = `https://api.github.com/gists/${gistId}`;
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'launchpad-cli'
+    };
+
+    if (token) {
+      headers['Authorization'] = `token ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        throw new Error(`GitHub Gist API error: ${response.status} ${response.statusText}`);
+      }
+
+      const gistData = await response.json() as {
+        files: Record<string, { content: string; truncated: boolean }>;
+      };
+
+      const file = gistData.files[fileName];
+      if (!file) {
+        throw new Error(`File '${fileName}' not found in gist`);
+      }
+
+      if (file.truncated) {
+        throw new Error('Gist file is truncated. Please use a smaller config file or GitHub repository instead.');
+      }
+
+      const bundle = JSON.parse(file.content) as ConfigBundle;
+      return bundle;
+    } catch (error) {
+      throw new Error(`Failed to download config from GitHub Gist: ${error}`);
+    }
+  }
+
+  async uploadConfigToGist(bundle: ConfigBundle, options: {
+    gistId?: string;
+    fileName?: string;
+    token: string;
+    description?: string;
+    saveConfig?: boolean;
+  }): Promise<string> {
+    const {
+      gistId,
+      fileName = 'launchpad-config.json',
+      token,
+      description = `Launchpad configuration - ${new Date().toISOString()}`,
+      saveConfig = false
+    } = options;
+
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `token ${token}`,
+      'User-Agent': 'launchpad-cli',
+      'Content-Type': 'application/json'
+    };
+
+    const content = JSON.stringify(bundle, null, 2);
+
+    try {
+      if (gistId) {
+        // Update existing gist
+        const url = `https://api.github.com/gists/${gistId}`;
+        const body = {
+          description,
+          files: {
+            [fileName]: {
+              content
+            }
+          }
+        };
+
+        const response = await fetch(url, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json() as { message?: string };
+          throw new Error(`GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`);
+        }
+
+        const responseData = await response.json() as { id: string; html_url: string };
+        console.log(`✅ Config updated in GitHub Gist: ${responseData.html_url}`);
+
+        if (saveConfig) {
+          await this.saveGistConfig(responseData.id, fileName, token, description);
+        }
+
+        return responseData.id;
+      }
+
+      // Create new gist
+      const url = 'https://api.github.com/gists';
+      const body = {
+        description,
+        public: false, // Private by default for security
+        files: {
+          [fileName]: {
+            content
+          }
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json() as { message?: string };
+        throw new Error(`GitHub Gist API error: ${response.status} ${errorData.message || response.statusText}`);
+      }
+
+      const responseData = await response.json() as { id: string; html_url: string };
+      console.log(`✅ Config uploaded to new GitHub Gist: ${responseData.html_url}`);
+      console.log(`📋 Gist ID: ${responseData.id} (automatically saved to config)`);
+
+      if (saveConfig) {
+        await this.saveGistConfig(responseData.id, fileName, token, description);
+      }
+
+      return responseData.id;
+    } catch (error) {
+      throw new Error(`Failed to upload config to GitHub Gist: ${error}`);
+    }
+  }
+
+  private async saveGistConfig(gistId: string, fileName: string, token: string, description: string): Promise<void> {
+    try {
+      // Import ConfigManager to save the gist configuration
+      const { ConfigManager } = await import("@/utils/config/manager");
+      const configManager = ConfigManager.getInstance();
+
+      await configManager.setSyncProvider("gist", {
+        gistId,
+        fileName,
+        token,
+        description,
+      });
+
+      // Set gist as default provider if no default is set
+      const syncConfig = await configManager.getSyncConfig();
+      if (!syncConfig || !syncConfig.defaultProvider) {
+        await configManager.setDefaultSyncProvider("gist");
+      }
+
+      console.log(chalk.green("💾 Gist configuration saved for future use"));
+    } catch (error) {
+      console.warn(chalk.yellow(`⚠️  Could not save gist configuration: ${error}`));
     }
   }
 
