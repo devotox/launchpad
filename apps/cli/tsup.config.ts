@@ -14,6 +14,7 @@ export default defineConfig([
     bundle: true,
     minify: false,
     shims: true,
+    tsconfig: "tsconfig.build.json",
   },
   // CLI binary entry with shebang
   {
@@ -28,6 +29,7 @@ export default defineConfig([
     bundle: true,
     minify: false,
     shims: true,
+    tsconfig: "tsconfig.build.json",
     banner: {
       js: "#!/usr/bin/env node",
     },

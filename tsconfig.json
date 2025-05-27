@@ -1,4 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
-  "exclude": ["tmp", "dist", "build", "node_modules", "apps/**/*", "packages/**/*"]
+  "exclude": ["tmp", "dist", "build", "node_modules"],
+  "references": [
+    {
+      "path": "./apps/cli"
+    },
+    {
+      "path": "./packages/shared-utils"
+    }
+  ]
 }

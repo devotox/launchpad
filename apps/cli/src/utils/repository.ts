@@ -71,10 +71,10 @@ export class RepositoryManager {
     ]);
 
     await match(method)
-      .with('gh', () => this.setupGitHubCLI())
-      .with('token', () => this.setupPersonalAccessToken())
-      .with('ssh', () => this.setupSSHKey())
-      .with('skip', () => {
+      .with('gh', async () => this.setupGitHubCLI())
+      .with('token', async () => this.setupPersonalAccessToken())
+      .with('ssh', async () => this.setupSSHKey())
+      .with('skip', async () => {
         console.log(
           chalk.yellow(
             '⚠️  Skipping authentication setup. You may encounter issues cloning repositories.'
@@ -82,7 +82,7 @@ export class RepositoryManager {
         );
         return Promise.resolve();
       })
-      .otherwise(() => Promise.resolve());
+      .otherwise(async () => Promise.resolve());
   }
 
   async setupGitHubCLI(): Promise<void> {

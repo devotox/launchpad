@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 
 import { BackupHandler } from './backup-handler';
+import { ProviderHandler } from './provider-handler';
 import { RestoreHandler } from './restore-handler';
 import { SyncHandler } from './sync-handler';
-import { ProviderHandler } from './provider-handler';
 
 export class ConfigCommand {
   private backupHandler = new BackupHandler();

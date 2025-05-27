@@ -1,9 +1,11 @@
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
+
 import chalk from 'chalk';
 import { match } from 'ts-pattern';
 
 import { CoreDataManager } from '@/utils/config/data-manager/core';
+
 import type { Team, SetupComponent } from '@/utils/config/data';
 import type { ConfigBundle, BackupFileInfo, SyncConfig } from '@/utils/config/types';
 
@@ -283,9 +285,7 @@ export class DataManager {
       }
 
       const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      const bundle = JSON.parse(content) as ConfigBundle;
-
-      return bundle;
+      return JSON.parse(content) as ConfigBundle;
     } catch (error) {
       throw new Error(`Failed to download config from GitHub: ${error}`);
     }
@@ -396,8 +396,7 @@ export class DataManager {
         throw new Error('Gist file is truncated. Please use a smaller config file or GitHub repository instead.');
       }
 
-      const bundle = JSON.parse(file.content) as ConfigBundle;
-      return bundle;
+      return JSON.parse(file.content) as ConfigBundle;
     } catch (error) {
       throw new Error(`Failed to download config from GitHub Gist: ${error}`);
     }
@@ -514,7 +513,7 @@ export class DataManager {
         gistId,
         fileName,
         token,
-        description,
+        description
       });
 
       // Set gist as default provider if no default is set
@@ -591,7 +590,7 @@ export class DataManager {
           .with('teams', () => this.getTeamsFilePath())
           .with('setup-components', () => this.getSetupComponentsFilePath())
           .with('global-docs', () => this.getGlobalDocsFilePath())
-          .with('sync-config', async () => await this.getSyncConfigFilePath())
+          .with('sync-config', async () => this.getSyncConfigFilePath())
           .otherwise(() => {
             throw new Error(`Unknown config type: ${configType}`);
           });
@@ -618,11 +617,11 @@ export class DataManager {
 
     // Restore the data
     await match(configType)
-      .with('teams', () => this.updateTeams(backupData.data as Team[]))
-      .with('setup-components', () => this.updateSetupComponents(backupData.data as SetupComponent[]))
-      .with('global-docs', () => this.updateGlobalOnboardingDocs(backupData.data as string[]))
-      .with('sync-config', () => this.updateSyncConfig(backupData.data as SyncConfig))
-      .otherwise(() => Promise.resolve());
+      .with('teams', async () => this.updateTeams(backupData.data as Team[]))
+      .with('setup-components', async () => this.updateSetupComponents(backupData.data as SetupComponent[]))
+      .with('global-docs', async () => this.updateGlobalOnboardingDocs(backupData.data as string[]))
+      .with('sync-config', async () => this.updateSyncConfig(backupData.data as SyncConfig))
+      .otherwise(async () => Promise.resolve());
 
     console.log(`✅ ${configType} configuration restored successfully`);
   }

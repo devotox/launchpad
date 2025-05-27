@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
 import { getConfigDirectory } from '@/utils/config/paths';
+
 import type { Team, SetupComponent } from '@/utils/config/data';
 
 export class CoreDataManager {

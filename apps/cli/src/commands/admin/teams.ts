@@ -4,6 +4,7 @@ import inquirer from 'inquirer';
 import { match } from 'ts-pattern';
 
 import { DataManager } from '@/utils/config';
+
 import type { Team } from '@/utils/config';
 
 type TeamFormData = {
@@ -102,10 +103,10 @@ export class TeamsCommand {
     ]);
 
     await match(action)
-      .with('add', () => this.addTeam())
-      .with('edit', () => this.selectAndEditTeam())
-      .with('remove', () => this.selectAndRemoveTeam())
-      .otherwise(() => Promise.resolve());
+      .with('add', async () => this.addTeam())
+      .with('edit', async () => this.selectAndEditTeam())
+      .with('remove', async () => this.selectAndRemoveTeam())
+      .otherwise(async () => Promise.resolve());
   }
 
   private async addTeam(): Promise<void> {
@@ -129,7 +130,7 @@ export class TeamsCommand {
   }
 
   private async promptTeamData() {
-    return await inquirer.prompt([
+    return inquirer.prompt([
       {
         type: 'input',
         name: 'id',
@@ -283,7 +284,7 @@ export class TeamsCommand {
   }
 
   private async promptTeamUpdates(team: Team) {
-    return await inquirer.prompt([
+    return inquirer.prompt([
       {
         type: 'input',
         name: 'name',

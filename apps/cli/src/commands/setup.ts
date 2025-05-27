@@ -314,10 +314,10 @@ export class SetupCommand {
           }
           return null;
         })
-        .with('kubernetes-access', () => {
+        .with('kubernetes-access', () => 
           // Check if kubectl is installed and configured
-          return 'kubectl version --client';
-        })
+           'kubectl version --client'
+        )
         .with('vpn-access', () => {
           // Check if OpenVPN client is installed
           if (platform === 'macos') {
@@ -331,10 +331,10 @@ export class SetupCommand {
           }
           return null;
         })
-        .with('google-workspace', () => {
+        .with('google-workspace', () => 
           // This is more of a configuration check - we'll assume it needs manual verification
-          return null;
-        })
+           null
+        )
         .otherwise(() => null);
 
       if (command) {
@@ -699,7 +699,7 @@ export class SetupCommand {
           console.log(chalk.gray("   Run 'brew --version' to verify installation"));
         })
         .with('node-volta', () => {
-          console.log(chalk.gray("   Restart your terminal or run: source ~/.bashrc"));
+          console.log(chalk.gray('   Restart your terminal or run: source ~/.bashrc'));
           console.log(chalk.gray("   Then run 'volta install node@lts' to install the latest LTS Node.js"));
           console.log(chalk.gray("   Run 'volta install pnpm' to install PNPM via Volta"));
         })

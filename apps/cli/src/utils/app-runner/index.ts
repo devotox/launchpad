@@ -1,10 +1,11 @@
 import { join } from 'node:path';
 
 import { ConfigManager } from '@/utils/config';
-import { ProcessManager } from './process-manager';
-import { DockerDetector } from './docker-detector';
+
 import { CommandResolver } from './command-resolver';
+import { DockerDetector } from './docker-detector';
 import { LogManager } from './log-manager';
+import { ProcessManager } from './process-manager';
 import { RepositoryManager } from './repository-manager';
 
 import type { RunOptions, RunningProcess } from './types';

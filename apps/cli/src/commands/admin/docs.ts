@@ -51,9 +51,9 @@ export class DocsCommand {
     ]);
 
     await match(action)
-      .with('add', () => this.addDoc())
-      .with('list', () => this.listDocs())
-      .otherwise(() => Promise.resolve());
+      .with('add', async () => this.addDoc())
+      .with('list', async () => this.listDocs())
+      .otherwise(async () => Promise.resolve());
   }
 
   private async addDoc(): Promise<void> {

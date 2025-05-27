@@ -83,26 +83,26 @@ const config = [
             '@Root/vitest.server.config.ts'
           ]
         }
+      ],
+      // Explicitly set these rules to be more strict for our test files
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../*'],
+              message:
+                'TEST: Prefer TypeScript path aliases (@/*) over relative imports with parent directory'
+            },
+            {
+              group: ['../../*'],
+              message:
+                'TEST: Prefer TypeScript path aliases (@/*) over relative imports with multiple levels'
+            }
+          ]
+        }
       ]
-    },
-    // Explicitly set these rules to be more strict for our test files
-    'no-restricted-imports': [
-      'error',
-      {
-        patterns: [
-          {
-            group: ['../*'],
-            message:
-              'TEST: Prefer TypeScript path aliases (@/*) over relative imports with parent directory'
-          },
-          {
-            group: ['../../*'],
-            message:
-              'TEST: Prefer TypeScript path aliases (@/*) over relative imports with multiple levels'
-          }
-        ]
-      }
-    ]
+    }
   },
   {
     files: ['**/*.test.ts', '**/*.test.tsx'],

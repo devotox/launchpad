@@ -3,6 +3,7 @@ import inquirer from 'inquirer';
 import { match } from 'ts-pattern';
 
 import { ConfigManager } from '@/utils/config';
+
 import type { SyncConfig } from '@/utils/config/types';
 
 export class ProviderHandler {
@@ -28,16 +29,16 @@ export class ProviderHandler {
           { name: 'Add new provider', value: 'add' },
           { name: 'List providers', value: 'list' },
           { name: 'Set default provider', value: 'default' },
-          { name: 'Back to main menu', value: 'back' },
-        ],
-      },
+          { name: 'Back to main menu', value: 'back' }
+        ]
+      }
     ]);
 
     await match(action)
-      .with('add', () => this.addSyncProvider())
-      .with('list', () => this.listSyncProviders())
-      .with('default', () => this.selectDefaultSyncProvider())
-      .otherwise(() => Promise.resolve());
+      .with('add', async () => this.addSyncProvider())
+      .with('list', async () => this.listSyncProviders())
+      .with('default', async () => this.selectDefaultSyncProvider())
+      .otherwise(async () => Promise.resolve());
   }
 
   async addSyncProvider(): Promise<void> {
@@ -53,9 +54,9 @@ export class ProviderHandler {
           { name: 'GitHub Gist (Recommended)', value: 'gist' },
           { name: 'GitHub Repository', value: 'github' },
           { name: 'Google Drive', value: 'googledrive' },
-          { name: 'Local File System', value: 'local' },
-        ],
-      },
+          { name: 'Local File System', value: 'local' }
+        ]
+      }
     ]);
 
     if (provider === 'github') {
@@ -67,32 +68,32 @@ export class ProviderHandler {
           validate: (input: string) => {
             if (!input.includes('/')) return 'Repository must be in format \'org/repo\'';
             return true;
-          },
+          }
         },
         {
           type: 'input',
           name: 'branch',
           message: 'Branch name:',
-          default: 'main',
+          default: 'main'
         },
         {
           type: 'input',
           name: 'path',
           message: 'File path in repository:',
-          default: 'launchpad-config.json',
+          default: 'launchpad-config.json'
         },
         {
           type: 'password',
           name: 'token',
-          message: 'GitHub personal access token (optional):',
-        },
+          message: 'GitHub personal access token (optional):'
+        }
       ]);
 
       await this.configManager.setSyncProvider('github', {
         repository: githubConfig.repository,
         branch: githubConfig.branch,
         path: githubConfig.path,
-        token: githubConfig.token || undefined,
+        token: githubConfig.token || undefined
       });
 
       console.log(chalk.green('✅ GitHub provider configured successfully!'));
@@ -101,33 +102,33 @@ export class ProviderHandler {
         {
           type: 'input',
           name: 'gistId',
-          message: 'GitHub Gist ID (leave empty to create new gist when uploading):',
+          message: 'GitHub Gist ID (leave empty to create new gist when uploading):'
         },
         {
           type: 'input',
           name: 'fileName',
           message: 'File name in gist:',
-          default: 'launchpad-config.json',
+          default: 'launchpad-config.json'
         },
         {
           type: 'input',
           name: 'description',
           message: 'Gist description:',
-          default: 'Launchpad configuration',
+          default: 'Launchpad configuration'
         },
         {
           type: 'password',
           name: 'token',
           message: 'GitHub personal access token:',
-          validate: (input: string) => input.length > 0 || 'Token is required for Gist operations',
-        },
+          validate: (input: string) => input.length > 0 || 'Token is required for Gist operations'
+        }
       ]);
 
       await this.configManager.setSyncProvider('gist', {
         gistId: gistConfig.gistId || '',
         fileName: gistConfig.fileName,
         description: gistConfig.description,
-        token: gistConfig.token,
+        token: gistConfig.token
       });
 
       console.log(chalk.green('✅ GitHub Gist provider configured successfully!'));
@@ -137,19 +138,19 @@ export class ProviderHandler {
           type: 'input',
           name: 'folderId',
           message: 'Google Drive folder ID:',
-          validate: (input: string) => input.length > 0 || 'Folder ID is required',
+          validate: (input: string) => input.length > 0 || 'Folder ID is required'
         },
         {
           type: 'input',
           name: 'fileName',
           message: 'File name:',
-          default: 'launchpad-config.json',
-        },
+          default: 'launchpad-config.json'
+        }
       ]);
 
       await this.configManager.setSyncProvider('googledrive', {
         folderId: driveConfig.folderId,
-        fileName: driveConfig.fileName,
+        fileName: driveConfig.fileName
       });
 
       console.log(chalk.green('✅ Google Drive provider configured successfully!'));
@@ -159,26 +160,26 @@ export class ProviderHandler {
           type: 'input',
           name: 'path',
           message: 'Local backup directory:',
-          default: this.configManager.getConfigDir(),
+          default: this.configManager.getConfigDir()
         },
         {
           type: 'confirm',
           name: 'autoBackup',
           message: 'Enable automatic backups?',
-          default: true,
+          default: true
         },
         {
           type: 'number',
           name: 'backupRetention',
           message: 'Backup retention (days):',
-          default: 30,
-        },
+          default: 30
+        }
       ]);
 
       await this.configManager.setSyncProvider('local', {
         path: localConfig.path,
         autoBackup: localConfig.autoBackup,
-        backupRetention: localConfig.backupRetention,
+        backupRetention: localConfig.backupRetention
       });
 
       console.log(chalk.green('✅ Local provider configured successfully!'));
@@ -267,9 +268,9 @@ export class ProviderHandler {
         message: 'Select default sync provider:',
         choices: providers.map(p => ({
           name: `${p} ${p === syncConfig.defaultProvider ? '(current)' : ''}`,
-          value: p,
-        })),
-      },
+          value: p
+        }))
+      }
     ]);
 
     await this.configManager.setDefaultSyncProvider(provider as SyncConfig['defaultProvider']);

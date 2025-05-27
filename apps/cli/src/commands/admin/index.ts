@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 
-import { TeamsCommand } from './teams';
 import { ComponentsCommand } from './components';
-import { DocsCommand } from './docs';
 import { ConfigCommand } from './config';
+import { DocsCommand } from './docs';
 import { InfoCommand } from './info';
+import { TeamsCommand } from './teams';
 
 export class AdminCommand {
   getCommand(): Command {

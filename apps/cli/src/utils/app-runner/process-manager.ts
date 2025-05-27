@@ -173,7 +173,7 @@ export class ProcessManager {
 
     console.log(chalk.cyan(`\n🛑 Stopping ${processes.length} running process(es)...\n`));
 
-    const stopPromises = processes.map(proc => this.stopProcess(proc));
+    const stopPromises = processes.map(async proc => this.stopProcess(proc));
     await Promise.allSettled(stopPromises);
 
     console.log(chalk.green('✅ All processes stopped.'));
@@ -190,7 +190,7 @@ export class ProcessManager {
 
     console.log(chalk.cyan(`\n🛑 Stopping ${processes.length} process(es)...\n`));
 
-    const stopPromises = processes.map(proc => this.stopProcess(proc));
+    const stopPromises = processes.map(async proc => this.stopProcess(proc));
     await Promise.allSettled(stopPromises);
 
     console.log(chalk.green('✅ Selected processes stopped.'));
@@ -220,11 +220,11 @@ export class ProcessManager {
       });
 
       let output = '';
-      stopProcess.stdout?.on('data', (data) => {
+      stopProcess.stdout.on('data', (data) => {
         output += data.toString();
       });
 
-      stopProcess.stderr?.on('data', (data) => {
+      stopProcess.stderr.on('data', (data) => {
         console.log(chalk.red(`${proc.repo}: ${data.toString().trim()}`));
       });
 

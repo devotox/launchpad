@@ -1,5 +1,5 @@
-import { promises as fs } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { promises as fs } from 'node:fs';
 
 import chalk from 'chalk';
 
@@ -79,14 +79,14 @@ export class LogManager {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
-      tailProcess.stdout?.on('data', (data: Buffer) => {
+      tailProcess.stdout.on('data', (data: Buffer) => {
         const lines = data.toString().split('\n').filter(line => line.trim());
         for (const line of lines) {
           this.formatLogLine(line);
         }
       });
 
-      tailProcess.stderr?.on('data', (data: Buffer) => {
+      tailProcess.stderr.on('data', (data: Buffer) => {
         console.log(chalk.red(`Tail error: ${data.toString()}`));
       });
 

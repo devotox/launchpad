@@ -13,10 +13,9 @@
     },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "incremental": false,
-    "composite": false,
-    "tsBuildInfoFile": null
+    "incremental": true,
+    "composite": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["dist", "node_modules", "**/*.test.ts"]
 }

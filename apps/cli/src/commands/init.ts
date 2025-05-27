@@ -326,7 +326,7 @@ export class InitCommand {
         console.log(chalk.gray('Installing GitHub CLI...'));
 
         // Try to install gh CLI based on platform
-        const platform = process.platform;
+        const { platform } = process;
         if (platform === 'darwin') {
           // Check if Homebrew is installed first
           try {
@@ -506,7 +506,7 @@ export class InitCommand {
     if (openBrowser) {
       try {
         const { execSync } = await import('node:child_process');
-        const platform = process.platform;
+        const { platform } = process;
 
         if (platform === 'darwin') {
           execSync('open https://github.com/settings/tokens');

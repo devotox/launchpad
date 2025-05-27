@@ -100,7 +100,7 @@ export class BackupHandler {
       throw new Error(`Invalid backup type: ${type}. Valid types: ${validTypes.join(', ')}`);
     }
 
-    return await this.dataManager.backupConfigFile(type as BackupConfigType, outputPath);
+    return this.dataManager.backupConfigFile(type as BackupConfigType, outputPath);
   }
 
   async selectiveBackup(): Promise<void> {
