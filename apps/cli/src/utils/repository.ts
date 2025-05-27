@@ -244,6 +244,9 @@ export class RepositoryManager {
   async setupRepository(repoName: string): Promise<void> {
     const repoPath = join(this.workspacePath, repoName);
 
+    // Create .env.local from example environment files
+    await this.createEnvironmentFile(repoPath, repoName);
+
     try {
       // Check if package.json exists
       const packageJsonPath = join(repoPath, 'package.json');
@@ -276,6 +279,107 @@ export class RepositoryManager {
 
     for (const repoName of repoNames) {
       await this.setupRepository(repoName);
+    }
+  }
+
+  private async createEnvironmentFile(repoPath: string, repoName: string): Promise<void> {
+    try {
+      const foundExampleFile = await this.findEnvironmentExampleFile(repoPath);
+      if (!foundExampleFile || foundExampleFile.trim() === '') return;
+
+      const envLocalPath = join(repoPath, '.env.local');
+
+      // Check if .env.local already exists
+      try {
+        await fs.access(envLocalPath);
+        console.log(chalk.gray(`ℹ️  .env.local already exists in ${repoName}, skipping...`));
+      } catch {
+        // .env.local doesn't exist, create it
+        const exampleContent = await fs.readFile(foundExampleFile, 'utf-8');
+        await fs.writeFile(envLocalPath, exampleContent);
+
+        const exampleFileName = foundExampleFile.split('/').pop() ?? 'example file';
+        console.log(chalk.green(`✅ Created .env.local for ${repoName} from ${exampleFileName}`));
+      }
+
+      // Ensure .gitignore properly ignores environment files
+      await this.ensureGitignoreEnvFiles(repoPath, repoName);
+    } catch (error) {
+      console.log(
+        chalk.yellow(
+          `⚠️  Could not create environment file for ${repoName}: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
+    }
+  }
+
+  private async findEnvironmentExampleFile(repoPath: string): Promise<string | null> {
+    const envExamplePatterns = [
+      '.env.example',
+      '.env.sample',
+      '.env.template',
+      'env.example',
+      'env.sample',
+      'env.template',
+      '.env.dist',
+      '.env.local.example'
+    ];
+
+    for (const pattern of envExamplePatterns) {
+      const examplePath = join(repoPath, pattern);
+      try {
+        await fs.access(examplePath);
+        return examplePath;
+      } catch {
+        // File doesn't exist, continue checking
+      }
+    }
+
+    return null;
+  }
+
+  private async ensureGitignoreEnvFiles(repoPath: string, repoName: string): Promise<void> {
+    try {
+      const gitignorePath = join(repoPath, '.gitignore');
+
+      // Environment file patterns that should be ignored
+      const envPatternsToIgnore = ['.env.local', '.env.*.local', '.env'];
+
+      let gitignoreContent = '';
+      let gitignoreExists = false;
+
+      // Read existing .gitignore if it exists
+      try {
+        gitignoreContent = await fs.readFile(gitignorePath, 'utf-8');
+        gitignoreExists = true;
+      } catch {
+        // .gitignore doesn't exist, we'll create it
+      }
+
+      // Check which patterns are missing
+      const missingPatterns = envPatternsToIgnore.filter(
+        (pattern) => !gitignoreContent.includes(pattern)
+      );
+
+      if (missingPatterns.length === 0) {
+        // All environment patterns are already ignored
+        return;
+      }
+
+      // Add missing patterns to .gitignore
+      const newContent = gitignoreExists
+        ? `${gitignoreContent}\n\n# Environment files\n${missingPatterns.join('\n')}\n`
+        : `# Environment files\n${missingPatterns.join('\n')}\n`;
+
+      await fs.writeFile(gitignorePath, newContent);
+
+      console.log(chalk.green(`✅ Updated .gitignore for ${repoName} to ignore environment files`));
+    } catch (error) {
+      console.log(
+        chalk.yellow(
+          `⚠️  Could not update .gitignore for ${repoName}: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
     }
   }
 

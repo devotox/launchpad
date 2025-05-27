@@ -11,9 +11,6 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.4
         version: 1.9.4
-      '@swc/core':
-        specifier: 1.11.29
-        version: 1.11.29
       '@total-typescript/ts-reset':
         specifier: 0.6.1
         version: 0.6.1
@@ -41,9 +38,6 @@ importers:
       typescript:
         specifier: 5.8.3
         version: 5.8.3
-      zx:
-        specifier: 8.5.4
-        version: 8.5.4
 
   apps/cli:
     dependencies:
@@ -78,15 +72,6 @@ importers:
       '@types/node':
         specifier: 22.15.21
         version: 22.15.21
-      '@typescript-eslint/eslint-plugin':
-        specifier: 8.32.1
-        version: 8.32.1(@typescript-eslint/parser@8.32.1(eslint@9.27.0(jiti@1.21.7))(typescript@5.8.3))(eslint@9.27.0(jiti@1.21.7))(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: 8.32.1
-        version: 8.32.1(eslint@9.27.0(jiti@1.21.7))(typescript@5.8.3)
-      eslint:
-        specifier: 9.27.0
-        version: 9.27.0(jiti@1.21.7)
       tsup:
         specifier: 8.5.0
         version: 8.5.0(@swc/core@1.11.29)(jiti@1.21.7)(postcss@8.5.3)(tsx@4.19.4)(typescript@5.8.3)(yaml@2.8.0)
@@ -102,9 +87,6 @@ importers:
       '@types/node':
         specifier: 22.15.21
         version: 22.15.21
-      eslint:
-        specifier: 9.27.0
-        version: 9.27.0(jiti@1.21.7)
       tsup:
         specifier: 8.5.0
         version: 8.5.0(@swc/core@1.11.29)(jiti@1.21.7)(postcss@8.5.3)(tsx@4.19.4)(typescript@5.8.3)(yaml@2.8.0)
@@ -5901,12 +5883,15 @@ snapshots:
       '@swc/core-win32-arm64-msvc': 1.11.29
       '@swc/core-win32-ia32-msvc': 1.11.29
       '@swc/core-win32-x64-msvc': 1.11.29
+    optional: true
 
-  '@swc/counter@0.1.3': {}
+  '@swc/counter@0.1.3':
+    optional: true
 
   '@swc/types@0.1.21':
     dependencies:
       '@swc/counter': 0.1.3
+    optional: true
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 

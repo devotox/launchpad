@@ -13,19 +13,19 @@
     "lint": {
       "dependsOn": ["^build"]
     },
-    "lint:biome": {
+    "lint:fix": {
       "cache": false
     },
-    "lint:oxlint": {
+    "format": {
       "cache": false
     },
-    "lint:eslint": {
-      "cache": false
-    },
-    "format:biome": {
+    "format:write": {
       "cache": false
     },
     "check": {
+      "cache": false
+    },
+    "check:write": {
       "cache": false
     },
     "test": {

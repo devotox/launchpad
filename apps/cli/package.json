@@ -11,7 +11,12 @@
   "scripts": {
     "build": "tsup --config tsup.config.ts",
     "dev": "tsx --watch src/bin/launchpad.ts",
-    "lint": "biome lint src",
+    "lint": "biome lint . && oxlint .",
+    "lint:fix": "biome lint --write . && biome format --write .",
+    "format": "biome format .",
+    "format:write": "biome format --write .",
+    "check": "biome check .",
+    "check:write": "biome check --write .",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
@@ -33,12 +38,9 @@
     "@types/fs-extra": "11.0.4",
     "@types/inquirer": "9.0.8",
     "@types/node": "22.15.21",
-    "@typescript-eslint/eslint-plugin": "8.32.1",
-    "@typescript-eslint/parser": "8.32.1",
-    "eslint": "9.27.0",
-    "vitest": "2.1.8",
     "tsup": "8.5.0",
-    "tsx": "4.19.4"
+    "tsx": "4.19.4",
+    "vitest": "2.1.8"
   },
   "files": ["dist"],
   "engines": {
