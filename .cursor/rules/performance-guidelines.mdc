@@ -1,0 +1,73 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: Performance optimization guidelines and best practices for Launchpad CLI
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: false
+---
+
+# Performance Guidelines
+
+## Async Operations
+- **Avoid unnecessary async operations**
+- Use Promise.all() for parallel operations
+- Implement proper caching for expensive operations
+- Use streaming for large data processing
+
+## Data Structures
+- Use **efficient data structures** for the use case
+- Prefer Map/Set over objects/arrays for lookups
+- Use lazy loading for large datasets
+- Implement pagination for large lists
+
+## Optimization Strategies
+- **Cache expensive operations** when appropriate
+- Profile and optimize bottlenecks before premature optimization
+- Use memoization for pure functions with heavy computation
+- Implement debouncing for user input handling
+
+## Examples
+
+✅ **Good parallel processing:**
+```typescript
+// Process multiple items in parallel
+const results = await Promise.all(
+  items.map(item => processItem(item))
+);
+```
+
+✅ **Good caching:**
+```typescript
+class ConfigService {
+  private cache = new Map<string, Config>();
+
+  async getConfig(key: string): Promise<Config> {
+    if (this.cache.has(key)) {
+      return this.cache.get(key)!;
+    }
+
+    const config = await this.loadConfig(key);
+    this.cache.set(key, config);
+    return config;
+  }
+}
+```
+
+✅ **Good data structure choice:**
+```typescript
+// Use Set for fast lookups
+const allowedRoles = new Set(['admin', 'user', 'moderator']);
+const isValidRole = allowedRoles.has(userRole); // O(1) lookup
+```
+
+❌ **Bad - Sequential processing:**
+```typescript
+// Processes items one by one (slow)
+const results = [];
+for (const item of items) {
+  results.push(await processItem(item));
+}
+```

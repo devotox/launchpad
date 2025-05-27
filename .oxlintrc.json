@@ -1,10 +1,10 @@
 {
   "rules": {
-    "react": "all",
-    "typescript": "all",
-    "import": "all",
-    "jsx-a11y": "all",
-    "nextjs": "all"
+    "react": "error",
+    "typescript": "error",
+    "import": "error",
+    "jsx-a11y": "error",
+    "nextjs": "error"
   },
   "env": {
     "browser": true,

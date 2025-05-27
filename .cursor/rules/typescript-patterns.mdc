@@ -1,0 +1,43 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: TypeScript pattern matching and utility library standards
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Patterns & Utilities
+
+## Pattern Matching with ts-pattern
+- **ALWAYS** use `ts-pattern` instead of switch case statements
+- Use `match()` for complex conditional logic and type narrowing
+- Prefer exhaustive pattern matching with `.exhaustive()` when possible
+- Use `.otherwise()` for default cases only when truly needed
+
+Example:
+```typescript
+import { match } from 'ts-pattern';
+
+const result = match(value)
+  .with('option1', () => handleOption1())
+  .with('option2', () => handleOption2())
+  .exhaustive();
+```
+
+## Boolean Checks with ts-belt
+- Use `ts-belt G.isNotNullable()` for strict non-null/undefined checks
+- Use `ts-belt G.isNullable()` for strict null/undefined checks
+- Prefer these over manual `!== null && !== undefined` checks
+- Import from `ts-belt/Guard` for better type inference
+
+Example:
+```typescript
+import { G } from 'ts-belt';
+
+if (G.isNotNullable(value)) {
+  // value is guaranteed to be non-null/undefined
+}
+```

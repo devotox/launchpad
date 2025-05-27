@@ -1,0 +1,105 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: Testing standards and best practices for Launchpad CLI
+globs: ["**/*.test.ts", "**/*.spec.ts", "**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# Testing Standards
+
+## Testing Framework
+- **ALWAYS** use **Vitest** for all testing
+- **NEVER** use Jest - we have standardized on Vitest
+- Use Vitest's built-in mocking capabilities
+- Leverage Vitest's fast execution and modern features
+- Take advantage of Vitest's native ESM support and TypeScript integration
+
+## Test Coverage
+- Write **unit tests** for utilities and core functions
+- Test **command functionality** with integration tests
+- **Mock external dependencies** to ensure isolated testing
+- Aim for **high test coverage** (80%+ for critical paths)
+
+## Test Configuration
+- Use `globals: true` in vitest.config.ts (already configured)
+- Test files should be named `*.test.ts` or `*.spec.ts`
+- Place test files alongside source files or in a dedicated `tests/` directory
+
+## Test Organization
+- Group related tests in describe blocks
+- Use descriptive test names that explain the scenario
+- Follow AAA pattern: Arrange, Act, Assert
+- Keep tests focused on single behaviors
+- Use TypeScript path aliases (`@/`) for imports, never relative imports
+
+## Mocking Guidelines
+- Mock external APIs and services
+- Mock file system operations
+- Use dependency injection to make mocking easier
+- Use Vitest's `vi.mock()` for module mocking
+- Use `vi.fn()` for function mocking
+
+## Examples
+
+✅ **Good test structure:**
+```typescript
+import { describe, it, expect } from 'vitest';
+import { UserValidator } from '@/utils/user-validator';
+
+describe('UserValidator', () => {
+  describe('validateEmail', () => {
+    it('should return true for valid email addresses', () => {
+      // Arrange
+      const validator = new UserValidator();
+      const validEmail = 'user@example.com';
+
+      // Act
+      const result = validator.validateEmail(validEmail);
+
+      // Assert
+      expect(result).toBe(true);
+    });
+
+    it('should return false for invalid email addresses', () => {
+      const validator = new UserValidator();
+      const invalidEmail = 'not-an-email';
+
+      const result = validator.validateEmail(invalidEmail);
+
+      expect(result).toBe(false);
+    });
+  });
+});
+```
+
+✅ **Good mocking with Vitest:**
+```typescript
+import { vi, beforeEach, describe, it, expect } from 'vitest';
+import { ApiClient } from '@/utils/api-client';
+
+vi.mock('@/utils/api-client');
+const mockApiClient = vi.mocked(ApiClient);
+
+beforeEach(() => {
+  mockApiClient.mockClear();
+});
+```
+
+✅ **Function mocking:**
+```typescript
+import { vi } from 'vitest';
+
+const mockFn = vi.fn();
+mockFn.mockReturnValue('mocked value');
+mockFn.mockResolvedValue('async mocked value');
+```
+
+## Running Tests
+- Run all tests: `pnpm test`
+- Run tests in watch mode: `pnpm test --watch`
+- Run tests with coverage: `pnpm test --coverage`
+- Run specific test file: `pnpm test user-validator.test.ts`

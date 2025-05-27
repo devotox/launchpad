@@ -97,3 +97,61 @@ export type ConfigBundle = {
     description?: string;
   };
 }
+
+// Backup and Restore Types
+export type BackupConfigType = 'teams' | 'setup-components' | 'global-docs';
+
+export type BackupData<T = Team[] | SetupComponent[] | string[]> = {
+  version: string;
+  timestamp: string;
+  configType: BackupConfigType;
+  data: T;
+  metadata: {
+    source: string;
+    sourceFile: string;
+    description: string;
+  };
+}
+
+export type BackupFileInfo = {
+  path: string;
+  type: string;
+  timestamp: string;
+  size: number;
+}
+
+export type RestoreData = {
+  configType?: string;
+  teams?: Team[];
+  setupComponents?: SetupComponent[];
+  globalDocs?: string[];
+  version?: string;
+  timestamp?: string;
+  data?: { length: number };
+}
+
+export type GistFileData = {
+  files: Record<string, {
+    content: string;
+    truncated: boolean;
+  }>;
+}
+
+export type GistResponse = {
+  id: string;
+  html_url: string;
+}
+
+export type GitHubFileData = {
+  type: string;
+  content: string;
+  sha?: string;
+}
+
+export type BackupListItem = {
+  configType?: string;
+  teams?: unknown;
+  setupComponents?: unknown;
+  globalDocs?: unknown;
+  timestamp?: string;
+}

@@ -1,0 +1,67 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: Error handling patterns and async operation standards for Launchpad CLI
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: false
+---
+
+# Error Handling Standards
+
+## Async Operations
+- **Always** handle async operations properly
+- Use try-catch blocks for async/await
+- Handle Promise rejections explicitly
+- Never leave async operations unhandled
+
+## Error Types
+- Use **typed errors** where possible
+- Create custom error classes for domain-specific errors
+- Provide **meaningful error messages**
+- Include relevant context in error messages
+
+## Logging
+- Log errors appropriately with proper severity levels
+- Include stack traces for debugging
+- Log user-facing errors differently than system errors
+- Use structured logging when possible
+
+## Examples
+
+✅ **Good async handling:**
+```typescript
+async function fetchUserData(userId: string): Promise<User | null> {
+  try {
+    const response = await api.getUser(userId);
+    return response.data;
+  } catch (error) {
+    logger.error('Failed to fetch user data', { userId, error });
+    throw new UserFetchError(`Unable to fetch user ${userId}`, { cause: error });
+  }
+}
+```
+
+✅ **Good custom error:**
+```typescript
+class ValidationError extends Error {
+  constructor(
+    message: string,
+    public field: string,
+    public value: unknown
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+```
+
+❌ **Bad error handling:**
+```typescript
+async function fetchUser(id: string) {
+  const user = await api.getUser(id); // No error handling
+  return user;
+}
+```

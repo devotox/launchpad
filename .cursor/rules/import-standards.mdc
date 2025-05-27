@@ -1,0 +1,36 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: Import standards and module organization for Launchpad CLI
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: false
+---
+
+# Import Standards
+
+## Path Resolution
+- **ALWAYS** use tsconfig paths (`@/`) instead of relative imports
+- Import from `@/utils/config` instead of `../utils/config`
+- Import from `@/commands` instead of `../commands`
+
+## Module Organization
+- **NO** barrel exports (`index.ts` files) - import directly from specific files
+- Be explicit about imports - avoid re-exports
+- Each file should have a single responsibility
+
+## Examples
+
+✅ **Good:**
+```typescript
+import { ConfigManager } from '@/utils/config/config-manager';
+import { Logger } from '@/utils/logging/logger';
+```
+
+❌ **Bad:**
+```typescript
+import { ConfigManager } from '../../../utils/config/config-manager';
+import { Logger } from '@/utils'; // barrel export
+```

@@ -10,7 +10,9 @@ The configuration system is organized into several modules:
 - **`paths.ts`** - Cross-platform path resolution following XDG Base Directory specification
 - **`defaults.ts`** - Default configuration creation, validation, and migration
 - **`manager.ts`** - Main ConfigManager class that orchestrates all config operations
-- **`data-manager.ts`** - DataManager class for handling JSON data files
+- **`data-manager/`** - DataManager folder with modular data management
+  - **`index.ts`** - Main DataManager class interface
+  - **`core.ts`** - Core data operations implementation
 - **`index.ts`** - Public API exports
 
 ## Configuration Directory

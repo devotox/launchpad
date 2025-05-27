@@ -1,5 +1,5 @@
 {
-  "name": "@loveholidays/launchpad-cli",
+  "name": "@loveholidays/launchpad",
   "version": "1.0.0",
   "description": "The essential developer onboarding tool for LoveHolidays",
   "private": true,

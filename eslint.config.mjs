@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import eslintExtreme, { ignores } from 'eslint-config-extreme';
+import eslintExtreme from 'eslint-config-extreme';
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));

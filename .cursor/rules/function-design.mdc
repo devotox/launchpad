@@ -1,0 +1,66 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: Function design patterns and argument handling standards for Launchpad CLI
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: false
+---
+
+# Function Design Standards
+
+## Function Arguments
+- When a function has **more than 3 arguments**, use an object parameter instead
+- Use typed interfaces for object parameters to ensure type safety
+- Group related parameters into logical objects
+- This improves readability, maintainability, and makes argument order irrelevant
+
+## Function Design Principles
+- Keep functions under **100 lines maximum**
+- Each function should have a **single responsibility**
+- Use descriptive names that reveal intent
+- Prefer pure functions when possible
+
+## Examples
+
+❌ **Bad - Too many parameters:**
+```typescript
+function createUser(name: string, email: string, age: number, role: string, department: string) {
+  // implementation
+}
+```
+
+✅ **Good - Object parameter:**
+```typescript
+interface CreateUserParams {
+  name: string;
+  email: string;
+  age: number;
+  role: string;
+  department: string;
+}
+
+function createUser(params: CreateUserParams) {
+  // implementation
+}
+```
+
+✅ **Good - Grouped parameters:**
+```typescript
+interface UserInfo {
+  name: string;
+  email: string;
+  age: number;
+}
+
+interface UserRole {
+  role: string;
+  department: string;
+}
+
+function createUser(userInfo: UserInfo, userRole: UserRole) {
+  // implementation
+}
+```
