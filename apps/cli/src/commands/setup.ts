@@ -11,13 +11,19 @@ export class SetupCommand {
   getCommand(): Command {
     const setupCmd = new Command('setup').description('Set up development tools and environment');
 
-    // Main setup command
+    // Main setup commands
     setupCmd
       .command('all')
       .description('Interactive setup of all development tools')
-      .option('--essential-only', 'Only install essential tools')
-      .action(async (options) => {
-        await this.runFullSetup(options.essentialOnly);
+      .action(async () => {
+        await this.runFullSetup(false);
+      });
+
+    setupCmd
+      .command('essential')
+      .description('Interactive setup of essential development tools only')
+      .action(async () => {
+        await this.runFullSetup(true);
       });
 
     // Individual component setups
@@ -210,6 +216,9 @@ export class SetupCommand {
 
     private async checkComponentInstalled(componentId: string): Promise<boolean> {
     const { execSync } = await import('node:child_process');
+    const { existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const platform = this.detectPlatform();
 
     try {
       const command = match(componentId)
@@ -220,6 +229,112 @@ export class SetupCommand {
         .with('github-cli', () => 'gh --version')
         .with('docker-desktop', 'docker-engine', () => 'docker --version')
         .with('xcode-cli-tools', () => 'xcode-select -p')
+        .with('vscode', () => 'code --version')
+        .with('google-cloud-sdk', () => 'gcloud --version')
+        .with('ngrok', () => 'ngrok version')
+        .with('kubernetes-lens', () => {
+          // Check if Lens is installed (application check)
+          if (platform === 'macos') {
+            return existsSync('/Applications/Lens.app') ? 'echo "installed"' : null;
+          }
+          if (platform === 'linux') {
+            return 'which lens || which lens-desktop';
+          }
+          if (platform === 'windows') {
+            return 'where lens';
+          }
+          return null;
+        })
+        .with('figma', () => {
+          // Check if Figma is installed (application check)
+          if (platform === 'macos') {
+            return existsSync('/Applications/Figma.app') ? 'echo "installed"' : null;
+          }
+          if (platform === 'windows') {
+            return 'where figma';
+          }
+          return null;
+        })
+        .with('iterm2', () => {
+          // Check if iTerm2 is installed (macOS only)
+          if (platform === 'macos') {
+            return existsSync('/Applications/iTerm.app') ? 'echo "installed"' : null;
+          }
+          return null;
+        })
+        .with('alacritty', () => 'alacritty --version')
+        .with('kitty', () => 'kitty --version')
+        .with('bruno', () => {
+          // Check if Bruno is installed (application check)
+          if (platform === 'macos') {
+            return existsSync('/Applications/Bruno.app') ? 'echo "installed"' : null;
+          }
+          return 'which bruno';
+        })
+        .with('postman', () => {
+          // Check if Postman is installed (application check)
+          if (platform === 'macos') {
+            return existsSync('/Applications/Postman.app') ? 'echo "installed"' : null;
+          }
+          return 'which postman';
+        })
+        .with('insomnia', () => {
+          // Check if Insomnia is installed (application check)
+          if (platform === 'macos') {
+            return existsSync('/Applications/Insomnia.app') ? 'echo "installed"' : null;
+          }
+          return 'which insomnia';
+        })
+        .with('github-access', () => {
+          // Check if GitHub SSH key exists or gh is authenticated
+          const sshKeyPath = join(process.env['HOME'] || '', '.ssh', 'id_rsa');
+          const sshKeyPathEd25519 = join(process.env['HOME'] || '', '.ssh', 'id_ed25519');
+          if (existsSync(sshKeyPath) || existsSync(sshKeyPathEd25519)) {
+            return 'echo "ssh-key-exists"';
+          }
+          return 'gh auth status';
+        })
+        .with('npm-token', () => {
+          // Check if NPM token is set in environment variables
+          if (process.env['NPM_TOKEN'] || process.env['NODE_AUTH_TOKEN'] || process.env['NPM_AUTH_TOKEN']) {
+            return 'echo "npm-token-set"';
+          }
+          // Also check if .npmrc exists and contains a token
+          const npmrcPath = join(process.env['HOME'] || '', '.npmrc');
+          if (existsSync(npmrcPath)) {
+            try {
+              const { readFileSync } = require('node:fs');
+              const npmrcContent = readFileSync(npmrcPath, 'utf-8');
+              if (npmrcContent.includes('_authToken') || npmrcContent.includes('//registry.npmjs.org/:_authToken')) {
+                return 'echo "npmrc-token-exists"';
+              }
+            } catch {
+              // If we can't read the file, assume no token
+            }
+          }
+          return null;
+        })
+        .with('kubernetes-access', () => {
+          // Check if kubectl is installed and configured
+          return 'kubectl version --client';
+        })
+        .with('vpn-access', () => {
+          // Check if OpenVPN client is installed
+          if (platform === 'macos') {
+            return 'which openvpn || which tunnelblick';
+          }
+          if (platform === 'linux') {
+            return 'which openvpn';
+          }
+          if (platform === 'windows') {
+            return 'where openvpn';
+          }
+          return null;
+        })
+        .with('google-workspace', () => {
+          // This is more of a configuration check - we'll assume it needs manual verification
+          return null;
+        })
         .otherwise(() => null);
 
       if (command) {

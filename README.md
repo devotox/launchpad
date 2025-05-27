@@ -128,11 +128,10 @@ launchpad setup all
 # Explore available commands
 launchpad help
 
-# Set up your first project
-launchpad create project
-
-# Set up a new turbo repo workspace
-launchpad create workspace
+# Start working with your team's repositories
+launchpad app dev                       # Interactive selection of repositories
+launchpad app dev --all                 # Start all repositories
+launchpad app dev -r repo1 repo2        # Start specific repositories
 ```
 
 ### Configuration Management
