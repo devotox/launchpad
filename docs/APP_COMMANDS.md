@@ -6,6 +6,28 @@ This document provides comprehensive documentation for the Launchpad CLI applica
 
 The app command system is designed to handle multi-repository development workflows, supporting both traditional npm-based applications and Docker Compose containerized applications. It automatically detects the type of application and uses the appropriate commands.
 
+## Implementation Status
+
+The app command system is **fully implemented and functional**:
+
+### ✅ What Works
+- All command parsing and routing
+- Repository selection (interactive, specific, or all)
+- Docker Compose detection and handling
+- NPM script execution
+- Process management and tracking
+- Log management and viewing
+- Parallel and sequential execution
+- Environment-specific commands (dev, prod)
+- Graceful shutdown and cleanup
+
+### 🔧 Current Features
+- **Process Tracking**: All running processes are tracked with PIDs
+- **Log Management**: Logs are stored in `workspace/.launchpad/logs/`
+- **Docker Integration**: Automatic detection and appropriate command mapping
+- **Interactive Mode**: When no repos specified, prompts for selection
+- **Error Handling**: Graceful error handling with continuation options
+
 ## Quick Reference
 
 ### Basic Commands
@@ -16,6 +38,8 @@ launchpad app start -r aurora mmb    # Start specific repositories
 launchpad app build --env prod       # Build for production
 launchpad app test --watch           # Run tests in watch mode
 launchpad app lint --fix             # Run linting with auto-fix
+launchpad app run typecheck --all    # Run custom commands
+launchpad app list --detailed        # List available repositories
 launchpad app status                 # Show running process status
 launchpad app logs -r aurora --follow # Follow logs for a repository
 launchpad app stop --all             # Stop all running processes
@@ -44,6 +68,8 @@ launchpad app dev -r frontend --parallel   # Explicitly run in parallel
 **Behavior:**
 - **NPM projects**: Runs `npm run dev`
 - **Docker Compose**: Runs `docker compose up --build`
+
+**Note**: The system automatically detects Docker Compose projects by looking for compose files (`docker-compose.yml`, `compose.yml`, etc.) and uses appropriate Docker commands.
 
 ### `launchpad app start`
 
@@ -233,13 +259,34 @@ launchpad app run clean -r frontend      # Clean specific repo
 launchpad app run custom-script --all    # Run custom npm script
 ```
 
+### `launchpad app list`
+
+List all available repositories in the workspace.
+
+**Options:**
+- `--detailed` - Show detailed repository information (default: false)
+
+**Examples:**
+```bash
+launchpad app list                       # List all repositories
+launchpad app list --detailed            # Show detailed information
+```
+
+**Output includes:**
+- Repository names
+- Repository paths (with --detailed)
+- Available npm scripts (with --detailed)
+- Docker Compose detection (with --detailed)
+
 ## Docker Compose Support
 
 Launchpad automatically detects Docker Compose applications and handles them appropriately.
 
 ### Detection
 
-Launchpad looks for these files in order:
+Launchpad automatically detects Docker Compose projects by looking for compose files in the repository directory. The detection logic is implemented in the `AppRunner` class and checks for the presence of standard Docker Compose file names.
+
+**Common compose file names detected:**
 - `docker-compose.yml`
 - `docker-compose.yaml`
 - `compose.yml`
@@ -403,6 +450,7 @@ pnpm app:build    # launchpad app build --all
 pnpm app:test     # launchpad app test --all
 pnpm app:status   # launchpad app status
 pnpm app:stop     # launchpad app stop --all
+pnpm app:down     # launchpad app down --all
 pnpm app:kill     # launchpad app kill
 ```
 

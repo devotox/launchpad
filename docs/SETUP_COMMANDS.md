@@ -64,6 +64,8 @@ launchpad setup terminal       # Interactive choice of terminal
 launchpad setup loveholidays   # All LoveHolidays-specific tools
 ```
 
+**Note**: The setup system currently uses **mock implementations**. Setup components are stored in `~/.config/launchpad/setup-components.json` and start empty. Use `launchpad admin components:list` to view available components after they're added via the admin interface.
+
 ## Component Categories
 
 ### Essential Tools
@@ -134,22 +136,49 @@ The setup system automatically detects your platform and installs appropriate to
 - Provides better type safety and exhaustive checking
 - Makes the code more maintainable and less error-prone
 
-## Mock Implementation
+## Current Implementation Status
 
+The setup system is currently in **mock/development mode**:
+
+### What Works
+- ✅ All command parsing and routing
+- ✅ Platform detection (`macos`, `linux`, `windows`)
+- ✅ Component categorization and filtering
+- ✅ Interactive prompts and user experience
+- ✅ JSON-based component storage system
+- ✅ Grouped commands (kubernetes, github, api-client, terminal, loveholidays)
+
+### Mock Implementations
 Currently, all setup commands are **mock implementations** that:
-- Simulate installation time with realistic delays
+- Simulate installation time with realistic delays (1 second)
 - Show appropriate installation commands for each tool
 - Display next steps and configuration guidance
-- Track mock installation status
+- Always report components as "not installed" (`checkComponentInstalled` returns `false`)
+
+### LoveHolidays Grouped Setup
+The `launchpad setup loveholidays` command installs these components:
+- `npm-token` - NPM authentication for LoveHolidays packages
+- `vpn-access` - OpenVPN client configuration  
+- `google-workspace` - Google Workspace access verification
+- `kubernetes-access` - Kubernetes cluster access setup
 
 ### Ready for Real Implementation
 
 The architecture is designed to easily replace mock implementations with real ones:
-- `checkComponentInstalled()` - Replace with actual installation checks
-- `mockInstallComponent()` - Replace with real installation logic
-- Platform-specific installation commands are already mapped out
-- **Type-safe pattern matching** with `ts-pattern` ensures exhaustive handling of all components
-- **Compile-time guarantees** that all component types are handled correctly
+- `checkComponentInstalled()` - Currently returns `false` for all components
+- `mockInstallComponent()` - Simulates installation with delays and success messages
+- Component data is stored in JSON files and loaded dynamically
+- Platform detection works correctly (`macos`, `linux`, `windows`)
+- Type-safe interfaces ensure component structure consistency
+
+### Component IDs Used in Code
+
+The actual component IDs referenced in the implementation:
+- `xcode-cli-tools`, `homebrew`, `node-nvm`, `pnpm`, `git`
+- `docker-desktop`, `kubernetes-lens`, `google-cloud-sdk`
+- `github-cli`, `github-access`, `npm-token`, `google-workspace`, `vpn-access`
+- `bruno`, `postman`, `insomnia`, `figma`, `slack`
+- `iterm2`, `alacritty`, `ngrok`, `kubernetes-access`
 
 ## Example Workflows
 

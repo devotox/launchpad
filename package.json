@@ -1,10 +1,13 @@
 {
-  "name": "@loveholidays/launchpad",
+  "name": "@loveholidays/launchpad-cli",
   "version": "1.0.0",
   "description": "The essential developer onboarding tool for LoveHolidays",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
@@ -20,6 +23,8 @@
     "test": "turbo test",
     "clean": "turbo clean",
     "type-check": "turbo type-check",
+    "install:local": "./scripts/install-local.sh install",
+    "uninstall:local": "./scripts/install-local.sh uninstall",
     "dev:cli": "tsx --tsconfig apps/cli/tsconfig.json --watch apps/cli/src/bin/launchpad.ts",
     "start:cli": "tsx --tsconfig apps/cli/tsconfig.json apps/cli/src/bin/launchpad.ts",
     "cli": "tsx --tsconfig apps/cli/tsconfig.json apps/cli/src/bin/launchpad.ts",
