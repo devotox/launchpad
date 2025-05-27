@@ -3,8 +3,6 @@ import { Command } from 'commander';
 
 import { AdminCommand } from '@/commands/admin';
 import { AppCommand } from '@/commands/app';
-import { CreateCommand } from '@/commands/create';
-import { HelpCommand } from '@/commands/help';
 import { InitCommand } from '@/commands/init';
 import { SetupCommand } from '@/commands/setup';
 import { TeamCommand } from '@/commands/team';
@@ -33,8 +31,6 @@ ${chalk.cyan('Examples:')}
   ${chalk.gray('$')} launchpad setup kubernetes
   ${chalk.gray('$')} launchpad setup github
   ${chalk.gray('$')} launchpad setup loveholidays
-  ${chalk.gray('$')} launchpad create project
-  ${chalk.gray('$')} launchpad create workspace
   ${chalk.gray('$')} launchpad team qr
   ${chalk.gray('$')} launchpad team info
   ${chalk.gray('$')} launchpad team slack
@@ -47,6 +43,7 @@ ${chalk.cyan('Examples:')}
   ${chalk.gray('$')} launchpad admin teams:add
   ${chalk.gray('$')} launchpad admin docs:add
   ${chalk.gray('$')} launchpad help
+  ${chalk.gray('$')} launchpad help setup
 
 ${chalk.cyan('Quick Start:')}
   ${chalk.gray('1.')} launchpad init                    ${chalk.gray('# Initialize your workspace')}
@@ -77,10 +74,6 @@ ${chalk.cyan('Docker Compose Support:')}
     const setupCommand = new SetupCommand();
     this.program.addCommand(setupCommand.getCommand());
 
-    // Register create command
-    const createCommand = new CreateCommand();
-    this.program.addCommand(createCommand.getCommand());
-
     // Register team command
     const teamCommand = new TeamCommand();
     this.program.addCommand(teamCommand.getCommand());
@@ -92,10 +85,6 @@ ${chalk.cyan('Docker Compose Support:')}
     // Register admin command
     const adminCommand = new AdminCommand();
     this.program.addCommand(adminCommand.getCommand());
-
-    // Register help command
-    const helpCommand = new HelpCommand();
-    this.program.addCommand(helpCommand.getCommand());
   }
 
   public async run(): Promise<void> {
