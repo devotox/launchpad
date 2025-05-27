@@ -77,6 +77,47 @@ pnpm install -g @loveholidays/launchpad-cli
 
 ## Quick Start
 
+### Step 1: Development Environment Setup
+
+**First, set up your development environment** (this installs essential tools like Homebrew, Git, Node.js via Volta, PNPM, and GitHub CLI):
+
+```bash
+# Set up essential development tools (recommended first step)
+launchpad setup all --essential-only
+
+# Or set up everything at once
+launchpad setup all
+
+# Check what's installed
+launchpad setup status
+```
+
+### Step 2: Configuration Setup
+
+**Next, download or configure the necessary configuration files:**
+
+```bash
+# Option 1: Download existing configuration from a shared source
+# Note: You'll need a GitHub personal access token for private gists/repos
+launchpad admin config download --gist-id YOUR_GIST_ID --token YOUR_GITHUB_TOKEN
+
+# Option 2: Set up configuration providers for your organization
+launchpad admin config setup
+launchpad admin config providers
+
+# Option 3: Check what configuration files are available
+launchpad admin info
+```
+
+**GitHub Token Setup:**
+1. Go to [GitHub Settings > Personal Access Tokens](https://github.com/settings/tokens)
+2. Create a new token with `gist` scope (for Gist access) or `repo` scope (for repository access)
+3. Use the token in download/upload commands or save it in your provider configuration
+
+### Step 3: Initialize Your Workspace
+
+**Finally, initialize your developer workspace:**
+
 ```bash
 # Initialize your developer workspace
 launchpad init
@@ -93,6 +134,29 @@ launchpad create project
 # Set up a new turbo repo workspace
 launchpad create workspace
 ```
+
+### Configuration Management
+
+Launchpad uses a centralized configuration system for teams, setup components, and documentation. You can:
+
+```bash
+# Download configuration from GitHub Gist (requires token for private gists)
+launchpad admin config download --gist-id abc123def456 --token YOUR_GITHUB_TOKEN
+
+# Upload your local configuration to share with others (requires token)
+launchpad admin config upload --token YOUR_GITHUB_TOKEN
+
+# Backup your configuration locally (no token needed)
+launchpad admin config backup
+
+# Restore from a backup (no token needed)
+launchpad admin config restore
+
+# Manage sync providers (save tokens permanently to avoid repeated entry)
+launchpad admin config providers
+```
+
+**Pro Tip:** Configure your sync providers once with `launchpad admin config providers` to save your tokens permanently. This way you won't need to provide `--token` on every command.
 
 
 ## Application Management

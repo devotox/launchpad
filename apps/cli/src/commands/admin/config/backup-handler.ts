@@ -70,12 +70,12 @@ export class BackupHandler {
               if (!provider) return [key, provider];
 
               // Sanitize sensitive fields by setting them to empty strings
-              const sanitized = { ...provider } as any;
+              const sanitized = { ...provider } as Record<string, unknown>;
               if ('token' in sanitized) {
-                sanitized.token = '';
+                (sanitized as { token: string }).token = '';
               }
               if ('credentials' in sanitized) {
-                sanitized.credentials = '';
+                (sanitized as { credentials: string }).credentials = '';
               }
 
               return [key, sanitized];

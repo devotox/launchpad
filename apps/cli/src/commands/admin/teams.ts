@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
+import { match } from 'ts-pattern';
 
 import { DataManager } from '@/utils/config';
 import type { Team } from '@/utils/config';
@@ -100,17 +101,11 @@ export class TeamsCommand {
       }
     ]);
 
-    switch (action) {
-      case 'add':
-        await this.addTeam();
-        break;
-      case 'edit':
-        await this.selectAndEditTeam();
-        break;
-      case 'remove':
-        await this.selectAndRemoveTeam();
-        break;
-    }
+    await match(action)
+      .with('add', () => this.addTeam())
+      .with('edit', () => this.selectAndEditTeam())
+      .with('remove', () => this.selectAndRemoveTeam())
+      .otherwise(() => Promise.resolve());
   }
 
   private async addTeam(): Promise<void> {

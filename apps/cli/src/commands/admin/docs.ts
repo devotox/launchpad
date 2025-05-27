@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
+import { match } from 'ts-pattern';
 
 import { DataManager } from '@/utils/config';
 
@@ -49,14 +50,10 @@ export class DocsCommand {
       }
     ]);
 
-    switch (action) {
-      case 'add':
-        await this.addDoc();
-        break;
-      case 'list':
-        await this.listDocs();
-        break;
-    }
+    await match(action)
+      .with('add', () => this.addDoc())
+      .with('list', () => this.listDocs())
+      .otherwise(() => Promise.resolve());
   }
 
   private async addDoc(): Promise<void> {

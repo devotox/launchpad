@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import { match } from 'ts-pattern';
 
 import { ConfigManager } from '@/utils/config';
 import type { SyncConfig } from '@/utils/config/types';
@@ -32,17 +33,11 @@ export class ProviderHandler {
       },
     ]);
 
-    switch (action) {
-      case 'add':
-        await this.addSyncProvider();
-        break;
-      case 'list':
-        await this.listSyncProviders();
-        break;
-      case 'default':
-        await this.selectDefaultSyncProvider();
-        break;
-    }
+    await match(action)
+      .with('add', () => this.addSyncProvider())
+      .with('list', () => this.listSyncProviders())
+      .with('default', () => this.selectDefaultSyncProvider())
+      .otherwise(() => Promise.resolve());
   }
 
   async addSyncProvider(): Promise<void> {

@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
+import { match } from 'ts-pattern';
 
 import { DataManager } from '@/utils/config';
 
@@ -36,9 +37,9 @@ export class SetupCommand {
 
     setupCmd
       .command('node')
-      .description('Install Node.js and NPM')
+      .description('Install Node.js and NPM via Volta')
       .action(async () => {
-        await this.setupComponent('node-nvm');
+        await this.setupComponent('node-volta');
       });
 
     setupCmd
@@ -192,35 +193,44 @@ export class SetupCommand {
   }
 
   private detectPlatform(): 'macos' | 'linux' | 'windows' {
-    switch (process.platform) {
-      case 'darwin':
-        return 'macos';
-      case 'linux':
-        return 'linux';
-      case 'win32':
-        return 'windows';
-      default:
-        return 'linux'; // fallback
-    }
+    return match(process.platform)
+      .with('darwin', () => 'macos' as const)
+      .with('linux', () => 'linux' as const)
+      .with('win32', () => 'windows' as const)
+      .otherwise(() => 'linux' as const); // fallback
   }
 
   private getCategoryTitle(category: string): string {
-    switch (category) {
-      case 'essential':
-        return 'Essential Tools';
-      case 'development':
-        return 'Development Tools';
-      case 'optional':
-        return 'Optional Tools';
-      default:
-        return category.charAt(0).toUpperCase() + category.slice(1);
-    }
+    return match(category)
+      .with('essential', () => 'Essential Tools')
+      .with('development', () => 'Development Tools')
+      .with('optional', () => 'Optional Tools')
+      .otherwise(() => category.charAt(0).toUpperCase() + category.slice(1));
   }
 
-  private async checkComponentInstalled(_componentId: string): Promise<boolean> {
-    // Mock implementation - in a real scenario, this would check if the component is actually installed
-    // For now, we'll return false to indicate nothing is installed yet
-    return false;
+    private async checkComponentInstalled(componentId: string): Promise<boolean> {
+    const { execSync } = await import('node:child_process');
+
+    try {
+      const command = match(componentId)
+        .with('homebrew', () => 'brew --version')
+        .with('git', () => 'git --version')
+        .with('node-volta', 'node-nvm', 'node-asdf', () => 'node --version')
+        .with('pnpm', () => 'pnpm --version')
+        .with('github-cli', () => 'gh --version')
+        .with('docker-desktop', 'docker-engine', () => 'docker --version')
+        .with('xcode-cli-tools', () => 'xcode-select -p')
+        .otherwise(() => null);
+
+      if (command) {
+        execSync(command, { stdio: 'pipe' });
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   private groupByCategory(components: SetupComponent[]): Record<string, SetupComponent[]> {
@@ -266,7 +276,7 @@ export class SetupCommand {
       for (const component of categoryComponents) {
         const shouldInstall = await this.promptForComponent(component);
         if (shouldInstall) {
-          await this.mockInstallComponent(component);
+          await this.installComponent(component);
         }
       }
     }
@@ -302,7 +312,7 @@ export class SetupCommand {
       return;
     }
 
-    await this.mockInstallComponent(component);
+    await this.installComponent(component);
   }
 
   async setupKubernetes(): Promise<void> {
@@ -430,34 +440,181 @@ export class SetupCommand {
     return shouldInstall;
   }
 
-  private async mockInstallComponent(component: SetupComponent): Promise<void> {
+  private async installComponent(component: SetupComponent): Promise<void> {
     console.log(chalk.blue(`🔄 Installing ${component.name}...`));
 
-    // Simulate installation time
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const { execSync } = await import('node:child_process');
+    const platform = this.detectPlatform();
 
-    console.log(chalk.green(`✅ ${component.name} installed successfully`));
+    try {
+      await match(component.id)
+        .with('homebrew', async () => {
+          if (platform === 'macos') {
+            execSync('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"', { stdio: 'inherit' });
+          }
+        })
+        .with('xcode-cli-tools', async () => {
+          if (platform === 'macos') {
+            execSync('xcode-select --install', { stdio: 'inherit' });
+          }
+        })
+        .with('git', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install git', { stdio: 'inherit' });
+            })
+            .with('linux', async () => {
+              execSync('sudo apt-get update && sudo apt-get install -y git', { stdio: 'inherit' });
+            })
+            .with('windows', async () => {
+              console.log(chalk.yellow('Please download Git from: https://git-scm.com/download/win'));
+            })
+            .exhaustive();
+        })
+        .with('node-volta', async () => {
+          // Install Volta first
+          execSync('curl https://get.volta.sh | bash', { stdio: 'inherit' });
+          // Source the shell to get volta in PATH
+          execSync('source ~/.bashrc || source ~/.zshrc || true', { stdio: 'inherit', shell: '/bin/bash' });
+        })
+        .with('pnpm', async () => {
+          // Try volta first, fallback to npm
+          try {
+            execSync('volta install pnpm', { stdio: 'inherit' });
+          } catch {
+            execSync('npm install -g pnpm', { stdio: 'inherit' });
+          }
+        })
+        .with('github-cli', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install gh', { stdio: 'inherit' });
+            })
+            .with('linux', async () => {
+              execSync('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y', { stdio: 'inherit' });
+            })
+            .with('windows', async () => {
+              execSync('winget install --id GitHub.cli', { stdio: 'inherit' });
+            })
+            .exhaustive();
+        })
+        .with('docker-desktop', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install --cask docker', { stdio: 'inherit' });
+            })
+            .with('windows', async () => {
+              console.log(chalk.yellow('Please download Docker Desktop from: https://www.docker.com/products/docker-desktop'));
+            })
+            .otherwise(async () => {
+              console.log(chalk.yellow('Please install Docker Engine for your Linux distribution'));
+            });
+        })
+        .with('docker-engine', async () => {
+          if (platform === 'linux') {
+            execSync('curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh', { stdio: 'inherit' });
+          }
+        })
+        .with('vscode', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install --cask visual-studio-code', { stdio: 'inherit' });
+            })
+            .with('linux', async () => {
+              execSync('sudo snap install --classic code', { stdio: 'inherit' });
+            })
+            .with('windows', async () => {
+              execSync('winget install -e --id Microsoft.VisualStudioCode', { stdio: 'inherit' });
+            })
+            .exhaustive();
+        })
+        .with('bruno', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install --cask bruno', { stdio: 'inherit' });
+            })
+            .with('linux', async () => {
+              console.log(chalk.yellow('Please download Bruno from: https://www.usebruno.com/downloads'));
+            })
+            .with('windows', async () => {
+              console.log(chalk.yellow('Please download Bruno from: https://www.usebruno.com/downloads'));
+            })
+            .exhaustive();
+        })
+        .with('figma', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install --cask figma', { stdio: 'inherit' });
+            })
+            .with('windows', async () => {
+              execSync('winget install -e --id Figma.Figma', { stdio: 'inherit' });
+            })
+            .otherwise(async () => {
+              console.log(chalk.yellow('Figma is available as a web app at: https://www.figma.com'));
+            });
+        })
+        .with('iterm2', async () => {
+          if (platform === 'macos') {
+            execSync('brew install --cask iterm2', { stdio: 'inherit' });
+          }
+        })
+        .with('alacritty', async () => {
+          await match(platform)
+            .with('macos', async () => {
+              execSync('brew install --cask alacritty', { stdio: 'inherit' });
+            })
+            .with('linux', async () => {
+              execSync('sudo apt-get install -y alacritty', { stdio: 'inherit' });
+            })
+            .with('windows', async () => {
+              execSync('winget install -e --id Alacritty.Alacritty', { stdio: 'inherit' });
+            })
+            .exhaustive();
+        })
+        .otherwise(async () => {
+          console.log(chalk.yellow(`Installation for ${component.name} is not yet implemented`));
+          console.log(chalk.gray('This component requires manual installation'));
+        });
 
-    // Add component-specific post-install messages
-    switch (component.id) {
-      case 'homebrew':
-        console.log(chalk.gray("   Run 'brew --version' to verify installation"));
-        break;
-      case 'node-nvm':
-        console.log(chalk.gray("   Run 'nvm install --lts' to install the latest LTS Node.js"));
-        break;
-      case 'docker-desktop':
-        console.log(chalk.gray('   Start Docker Desktop from Applications'));
-        break;
-      case 'github-cli':
-        console.log(chalk.gray("   Run 'gh auth login' to authenticate with GitHub"));
-        break;
-      case 'npm-token':
-        console.log(chalk.gray('   Add your NPM token to ~/.npmrc'));
-        break;
-      case 'vpn-access':
-        console.log(chalk.gray('   Download VPN config from IT support'));
-        break;
+      console.log(chalk.green(`✅ ${component.name} installed successfully`));
+
+      // Add component-specific post-install messages
+      match(component.id)
+        .with('homebrew', () => {
+          console.log(chalk.gray("   Run 'brew --version' to verify installation"));
+        })
+        .with('node-volta', () => {
+          console.log(chalk.gray("   Restart your terminal or run: source ~/.bashrc"));
+          console.log(chalk.gray("   Then run 'volta install node@lts' to install the latest LTS Node.js"));
+          console.log(chalk.gray("   Run 'volta install pnpm' to install PNPM via Volta"));
+        })
+        .with('docker-desktop', () => {
+          console.log(chalk.gray('   Start Docker Desktop from Applications'));
+        })
+        .with('github-cli', () => {
+          console.log(chalk.gray("   Run 'gh auth login' to authenticate with GitHub"));
+        })
+        .with('npm-token', () => {
+          console.log(chalk.gray('   Add your NPM token to ~/.npmrc'));
+        })
+        .with('vpn-access', () => {
+          console.log(chalk.gray('   Download VPN config from IT support'));
+        })
+        .with('github-access', () => {
+          console.log(chalk.gray('   Set up SSH keys and personal access tokens'));
+          console.log(chalk.gray('   Visit: https://github.com/settings/keys'));
+        })
+        .with('google-workspace', () => {
+          console.log(chalk.gray('   Verify access to Google Workspace'));
+          console.log(chalk.gray('   Contact IT if you need access'));
+        })
+        .otherwise(() => {
+          // No specific post-install message
+        });
+
+    } catch (error) {
+      console.error(chalk.red(`❌ Failed to install ${component.name}: ${error}`));
+      console.log(chalk.gray('You may need to install this component manually'));
     }
   }
 }

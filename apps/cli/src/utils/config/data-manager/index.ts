@@ -1,10 +1,11 @@
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
+import { match } from 'ts-pattern';
 
 import { CoreDataManager } from '@/utils/config/data-manager/core';
 import type { Team, SetupComponent } from '@/utils/config/data';
-import type { ConfigBundle, BackupFileInfo } from '@/utils/config/types';
+import type { ConfigBundle, BackupFileInfo, SyncConfig } from '@/utils/config/types';
 
 export class DataManager {
   private static instance: DataManager;
@@ -110,6 +111,25 @@ export class DataManager {
     return this.coreDataManager.getGlobalDocsFilePath();
   }
 
+  // Sync config operations
+  async getSyncConfig() {
+    const { ConfigManager } = await import('@/utils/config/manager');
+    const configManager = ConfigManager.getInstance();
+    return configManager.getSyncConfig();
+  }
+
+  async updateSyncConfig(syncConfig: SyncConfig): Promise<void> {
+    const { ConfigManager } = await import('@/utils/config/manager');
+    const configManager = ConfigManager.getInstance();
+    return configManager.saveSyncConfig(syncConfig);
+  }
+
+  async getSyncConfigFilePath(): Promise<string> {
+    const { ConfigManager } = await import('@/utils/config/manager');
+    const configManager = ConfigManager.getInstance();
+    return configManager.getSyncConfigPath();
+  }
+
   // Bundle operations
   async createConfigBundle(): Promise<ConfigBundle> {
     const teams = await this.getTeams();
@@ -132,12 +152,12 @@ export class DataManager {
               if (!provider) return [key, provider];
 
               // Sanitize sensitive fields by setting them to empty strings
-              const sanitized = { ...provider } as any;
+              const sanitized = { ...provider } as Record<string, unknown>;
               if ('token' in sanitized) {
-                sanitized.token = '';
+                (sanitized as { token: string }).token = '';
               }
               if ('credentials' in sanitized) {
-                sanitized.credentials = '';
+                (sanitized as { credentials: string }).credentials = '';
               }
 
               return [key, sanitized];
@@ -510,7 +530,7 @@ export class DataManager {
   }
 
   // Backup and restore methods
-  async backupConfigFile(configType: 'teams' | 'setup-components' | 'global-docs', outputPath?: string): Promise<string> {
+  async backupConfigFile(configType: 'teams' | 'setup-components' | 'global-docs' | 'sync-config', outputPath?: string): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const configDir = this.coreDataManager.getTeamsFilePath().replace('/teams.json', '');
     const backupDir = join(configDir, 'backups');
@@ -520,25 +540,26 @@ export class DataManager {
 
     const defaultPath = outputPath || join(backupDir, `launchpad-${configType}-backup-${timestamp}.json`);
 
-    let data: Team[] | SetupComponent[] | string[];
-    let sourceFile: string;
-
-    switch (configType) {
-      case 'teams':
-        data = await this.getTeams();
-        sourceFile = this.getTeamsFilePath();
-        break;
-      case 'setup-components':
-        data = await this.getSetupComponents();
-        sourceFile = this.getSetupComponentsFilePath();
-        break;
-      case 'global-docs':
-        data = await this.getGlobalOnboardingDocs();
-        sourceFile = this.getGlobalDocsFilePath();
-        break;
-      default:
+    const { data, sourceFile } = await match(configType)
+      .with('teams', async () => ({
+        data: await this.getTeams(),
+        sourceFile: this.getTeamsFilePath()
+      }))
+      .with('setup-components', async () => ({
+        data: await this.getSetupComponents(),
+        sourceFile: this.getSetupComponentsFilePath()
+      }))
+      .with('global-docs', async () => ({
+        data: await this.getGlobalOnboardingDocs(),
+        sourceFile: this.getGlobalDocsFilePath()
+      }))
+      .with('sync-config', async () => ({
+        data: await this.getSyncConfig(),
+        sourceFile: await this.getSyncConfigFilePath()
+      }))
+      .otherwise(() => {
         throw new Error(`Unknown config type: ${configType}`);
-    }
+      });
 
     const backupData = {
       version: '1.0.0',
@@ -556,7 +577,7 @@ export class DataManager {
     return defaultPath;
   }
 
-  async restoreConfigFile(configType: 'teams' | 'setup-components' | 'global-docs', inputPath: string, createBackup = true): Promise<void> {
+  async restoreConfigFile(configType: 'teams' | 'setup-components' | 'global-docs' | 'sync-config', inputPath: string, createBackup = true): Promise<void> {
     const configDir = this.getTeamsFilePath().replace('/teams.json', '');
 
     // Create backup of current data if requested
@@ -566,20 +587,14 @@ export class DataManager {
       await fs.mkdir(backupDir, { recursive: true });
 
       try {
-        let sourceFile: string;
-        switch (configType) {
-          case 'teams':
-            sourceFile = this.getTeamsFilePath();
-            break;
-          case 'setup-components':
-            sourceFile = this.getSetupComponentsFilePath();
-            break;
-          case 'global-docs':
-            sourceFile = this.getGlobalDocsFilePath();
-            break;
-          default:
+        const sourceFile = await match(configType)
+          .with('teams', () => this.getTeamsFilePath())
+          .with('setup-components', () => this.getSetupComponentsFilePath())
+          .with('global-docs', () => this.getGlobalDocsFilePath())
+          .with('sync-config', async () => await this.getSyncConfigFilePath())
+          .otherwise(() => {
             throw new Error(`Unknown config type: ${configType}`);
-        }
+          });
 
         await fs.copyFile(sourceFile, join(backupDir, `${configType}.json`));
         console.log(`📁 Backup created at: ${backupDir}/${configType}.json`);
@@ -596,22 +611,18 @@ export class DataManager {
       throw new Error(`Backup file is for '${backupData.configType}' but trying to restore '${configType}'`);
     }
 
-    if (!Array.isArray(backupData.data)) {
+    // Validate backup data based on config type
+    if (configType !== 'sync-config' && !Array.isArray(backupData.data)) {
       throw new Error('Invalid backup data: expected array');
     }
 
     // Restore the data
-    switch (configType) {
-      case 'teams':
-        await this.updateTeams(backupData.data as Team[]);
-        break;
-      case 'setup-components':
-        await this.updateSetupComponents(backupData.data as SetupComponent[]);
-        break;
-      case 'global-docs':
-        await this.updateGlobalOnboardingDocs(backupData.data as string[]);
-        break;
-    }
+    await match(configType)
+      .with('teams', () => this.updateTeams(backupData.data as Team[]))
+      .with('setup-components', () => this.updateSetupComponents(backupData.data as SetupComponent[]))
+      .with('global-docs', () => this.updateGlobalOnboardingDocs(backupData.data as string[]))
+      .with('sync-config', () => this.updateSyncConfig(backupData.data as SyncConfig))
+      .otherwise(() => Promise.resolve());
 
     console.log(`✅ ${configType} configuration restored successfully`);
   }

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import { execa } from 'execa';
 import inquirer from 'inquirer';
+import { match } from 'ts-pattern';
 
 import type { Repository } from '@/utils/config';
 
@@ -69,24 +70,19 @@ export class RepositoryManager {
       }
     ]);
 
-    switch (method) {
-      case 'gh':
-        await this.setupGitHubCLI();
-        break;
-      case 'token':
-        await this.setupPersonalAccessToken();
-        break;
-      case 'ssh':
-        await this.setupSSHKey();
-        break;
-      case 'skip':
+    await match(method)
+      .with('gh', () => this.setupGitHubCLI())
+      .with('token', () => this.setupPersonalAccessToken())
+      .with('ssh', () => this.setupSSHKey())
+      .with('skip', () => {
         console.log(
           chalk.yellow(
             '⚠️  Skipping authentication setup. You may encounter issues cloning repositories.'
           )
         );
-        break;
-    }
+        return Promise.resolve();
+      })
+      .otherwise(() => Promise.resolve());
   }
 
   async setupGitHubCLI(): Promise<void> {
