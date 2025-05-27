@@ -116,12 +116,46 @@ export class DataManager {
     const setupComponents = await this.getSetupComponents();
     const globalDocs = await this.getGlobalOnboardingDocs();
 
+    // Get sanitized sync config
+    let sanitizedSyncConfig: ConfigBundle['syncConfig'];
+    try {
+      const { ConfigManager } = await import('@/utils/config/manager');
+      const configManager = ConfigManager.getInstance();
+      const syncConfig = await configManager.getSyncConfig();
+
+      if (syncConfig) {
+        // Create a sanitized version with empty tokens
+        sanitizedSyncConfig = {
+          ...syncConfig,
+          providers: Object.fromEntries(
+            Object.entries(syncConfig.providers).map(([key, provider]) => {
+              if (!provider) return [key, provider];
+
+              // Sanitize sensitive fields by setting them to empty strings
+              const sanitized = { ...provider } as any;
+              if ('token' in sanitized) {
+                sanitized.token = '';
+              }
+              if ('credentials' in sanitized) {
+                sanitized.credentials = '';
+              }
+
+              return [key, sanitized];
+            })
+          )
+        };
+      }
+    } catch {
+      // Sync config is optional, don't fail bundle creation
+    }
+
     return {
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       teams,
       setupComponents,
       globalDocs,
+      syncConfig: sanitizedSyncConfig,
       metadata: {
         source: 'launchpad-cli',
         description: 'Configuration bundle created by Launchpad CLI'
@@ -156,8 +190,44 @@ export class DataManager {
     await this.updateSetupComponents(bundle.setupComponents);
     await this.updateGlobalOnboardingDocs(bundle.globalDocs);
 
+    // Import sync config if present (user will need to add tokens manually)
+    if (bundle.syncConfig) {
+      try {
+        const { ConfigManager } = await import('@/utils/config/manager');
+        const configManager = ConfigManager.getInstance();
+        await configManager.saveSyncConfig(bundle.syncConfig);
+        console.log('📋 Sync configuration imported (tokens will need to be added manually)');
+      } catch (error) {
+        console.warn(`⚠️  Could not import sync config: ${error}`);
+      }
+    }
+
     console.log('✅ Config bundle imported successfully');
     console.log(`📁 Backup created at: ${backupDir}`);
+  }
+
+  // Helper method to parse gist ID from various formats
+  private parseGistId(gistInput: string): string {
+    // Handle full URLs: https://gist.github.com/username/gistId
+    const fullUrlMatch = gistInput.match(/https?:\/\/gist\.github\.com\/[^/]+\/([a-f0-9]+)/);
+    if (fullUrlMatch) {
+      return fullUrlMatch[1]!;
+    }
+
+    // Handle username/gistId format: username/gistId
+    const userGistMatch = gistInput.match(/^[^/]+\/([a-f0-9]+)$/);
+    if (userGistMatch) {
+      return userGistMatch[1]!;
+    }
+
+    // Handle raw gist ID: just the gist ID
+    const rawGistMatch = gistInput.match(/^([a-f0-9]+)$/);
+    if (rawGistMatch) {
+      return rawGistMatch[1]!;
+    }
+
+    // If none of the patterns match, throw an error
+    throw new Error(`Invalid gist format. Expected: full URL, username/gistId, or raw gist ID. Got: ${gistInput}`);
   }
 
   // Remote sync methods
@@ -270,7 +340,11 @@ export class DataManager {
     fileName?: string;
     token?: string;
   }): Promise<ConfigBundle> {
-    const { gistId, fileName = 'launchpad-config.json', token } = options;
+    const { gistId: gistInput, fileName = 'launchpad-config.json', token } = options;
+
+    // Parse the gist ID from various possible formats
+    const gistId = this.parseGistId(gistInput);
+    console.log(chalk.gray(`Parsed gist ID: ${gistId}`));
 
     const url = `https://api.github.com/gists/${gistId}`;
     const headers: Record<string, string> = {
@@ -317,12 +391,18 @@ export class DataManager {
     saveConfig?: boolean;
   }): Promise<string> {
     const {
-      gistId,
+      gistId: gistInput,
       fileName = 'launchpad-config.json',
       token,
       description = `Launchpad configuration - ${new Date().toISOString()}`,
       saveConfig = false
     } = options;
+
+    // Parse the gist ID if provided
+    const gistId = gistInput ? this.parseGistId(gistInput) : undefined;
+    if (gistId) {
+      console.log(chalk.gray(`Parsed gist ID: ${gistId}`));
+    }
 
     const headers = {
       'Accept': 'application/vnd.github.v3+json',
@@ -432,7 +512,13 @@ export class DataManager {
   // Backup and restore methods
   async backupConfigFile(configType: 'teams' | 'setup-components' | 'global-docs', outputPath?: string): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const defaultPath = outputPath || `launchpad-${configType}-backup-${timestamp}.json`;
+    const configDir = this.coreDataManager.getTeamsFilePath().replace('/teams.json', '');
+    const backupDir = join(configDir, 'backups');
+
+    // Ensure backup directory exists
+    await fs.mkdir(backupDir, { recursive: true });
+
+    const defaultPath = outputPath || join(backupDir, `launchpad-${configType}-backup-${timestamp}.json`);
 
     let data: Team[] | SetupComponent[] | string[];
     let sourceFile: string;

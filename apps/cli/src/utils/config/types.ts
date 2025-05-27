@@ -92,6 +92,7 @@ export type ConfigBundle = {
   teams: Team[];
   setupComponents: SetupComponent[];
   globalDocs: string[];
+  syncConfig?: SyncConfig;
   metadata: {
     source: string;
     description?: string;

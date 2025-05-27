@@ -283,9 +283,14 @@ export class ConfigManager {
   }
 
   async setSyncProvider(provider: keyof SyncConfig['providers'], config: SyncConfig['providers'][keyof SyncConfig['providers']]): Promise<void> {
-    const providers = { [provider]: config };
+    const currentSync = await this.getSyncConfig();
+    const currentProviders = currentSync?.providers || {};
+
     await this.updateSyncConfig({
-      providers
+      providers: {
+        ...currentProviders,
+        [provider]: config
+      }
     });
   }
 

@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 
 import { ConfigManager } from '@/utils/config';
+import type { SyncConfig } from '@/utils/config/types';
 
 export class ProviderHandler {
   private configManager = ConfigManager.getInstance();
@@ -217,26 +218,34 @@ export class ProviderHandler {
       console.log(chalk.white(`${badge} ${name.toUpperCase()}`));
 
       if (name === 'github' && config) {
-        const githubConfig = config as any;
-        console.log(chalk.gray(`  Repository: ${githubConfig.repository}`));
-        console.log(chalk.gray(`  Branch: ${githubConfig.branch}`));
-        console.log(chalk.gray(`  Path: ${githubConfig.path}`));
-        console.log(chalk.gray(`  Token: ${githubConfig.token ? 'Configured' : 'Not set'}`));
+        const githubConfig = config as SyncConfig['providers']['github'];
+        if (githubConfig) {
+          console.log(chalk.gray(`  Repository: ${githubConfig.repository}`));
+          console.log(chalk.gray(`  Branch: ${githubConfig.branch}`));
+          console.log(chalk.gray(`  Path: ${githubConfig.path}`));
+          console.log(chalk.gray(`  Token: ${githubConfig.token ? 'Configured' : 'Not set'}`));
+        }
       } else if (name === 'gist' && config) {
-        const gistConfig = config as any;
-        console.log(chalk.gray(`  Gist ID: ${gistConfig.gistId || 'Will create new'}`));
-        console.log(chalk.gray(`  File name: ${gistConfig.fileName}`));
-        console.log(chalk.gray(`  Description: ${gistConfig.description}`));
-        console.log(chalk.gray(`  Token: ${gistConfig.token ? 'Configured' : 'Not set'}`));
+        const gistConfig = config as SyncConfig['providers']['gist'];
+        if (gistConfig) {
+          console.log(chalk.gray(`  Gist ID: ${gistConfig.gistId || 'Will create new'}`));
+          console.log(chalk.gray(`  File name: ${gistConfig.fileName}`));
+          console.log(chalk.gray(`  Description: ${gistConfig.description}`));
+          console.log(chalk.gray(`  Token: ${gistConfig.token ? 'Configured' : 'Not set'}`));
+        }
       } else if (name === 'googledrive' && config) {
-        const driveConfig = config as any;
-        console.log(chalk.gray(`  Folder ID: ${driveConfig.folderId}`));
-        console.log(chalk.gray(`  File name: ${driveConfig.fileName}`));
+        const driveConfig = config as SyncConfig['providers']['googledrive'];
+        if (driveConfig) {
+          console.log(chalk.gray(`  Folder ID: ${driveConfig.folderId}`));
+          console.log(chalk.gray(`  File name: ${driveConfig.fileName}`));
+        }
       } else if (name === 'local' && config) {
-        const localConfig = config as any;
-        console.log(chalk.gray(`  Path: ${localConfig.path}`));
-        console.log(chalk.gray(`  Auto backup: ${localConfig.autoBackup ? 'Yes' : 'No'}`));
-        console.log(chalk.gray(`  Retention: ${localConfig.backupRetention} days`));
+        const localConfig = config as SyncConfig['providers']['local'];
+        if (localConfig) {
+          console.log(chalk.gray(`  Path: ${localConfig.path}`));
+          console.log(chalk.gray(`  Auto backup: ${localConfig.autoBackup ? 'Yes' : 'No'}`));
+          console.log(chalk.gray(`  Retention: ${localConfig.backupRetention} days`));
+        }
       }
       console.log('');
     }
@@ -268,7 +277,7 @@ export class ProviderHandler {
       },
     ]);
 
-    await this.configManager.setDefaultSyncProvider(provider as any);
+    await this.configManager.setDefaultSyncProvider(provider as SyncConfig['defaultProvider']);
     console.log(chalk.green(`✅ Default sync provider set to '${provider}'!`));
   }
 
@@ -286,7 +295,7 @@ export class ProviderHandler {
       return;
     }
 
-    await this.configManager.setDefaultSyncProvider(provider as any);
+    await this.configManager.setDefaultSyncProvider(provider as SyncConfig['defaultProvider']);
     console.log(chalk.green(`✅ Default sync provider set to '${provider}'!`));
   }
 }

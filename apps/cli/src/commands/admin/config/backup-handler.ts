@@ -30,14 +30,68 @@ export class BackupHandler {
   }
 
   private async createCompleteBackup(outputPath?: string): Promise<string> {
-    const bundle = await this.dataManager.createConfigBundle();
-    const backupPath = await this.dataManager.backupConfigFile('teams', outputPath);
-
-    // For complete backup, we create a bundle file
     const { promises: fs } = await import('node:fs');
-    await fs.writeFile(backupPath, JSON.stringify(bundle, null, 2));
+    const { join } = await import('node:path');
 
-    return backupPath;
+    // Create timestamped backup directory
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const configDir = this.dataManager.getTeamsFilePath().replace('/teams.json', '');
+    const backupDir = join(configDir, 'backups');
+    const timestampedDir = outputPath || join(backupDir, timestamp);
+
+    // Ensure backup directory exists
+    await fs.mkdir(timestampedDir, { recursive: true });
+
+    // Create individual backup files for each config type
+    const configTypes: BackupConfigType[] = ['teams', 'setup-components', 'global-docs'];
+
+    for (const configType of configTypes) {
+      const outputFile = join(timestampedDir, `${configType}.json`);
+      await this.dataManager.backupConfigFile(configType, outputFile);
+    }
+
+    // Also create a complete bundle file for convenience
+    const bundle = await this.dataManager.createConfigBundle();
+    const bundlePath = join(timestampedDir, 'complete-bundle.json');
+    await fs.writeFile(bundlePath, JSON.stringify(bundle, null, 2));
+
+    // Add sync config backup (without sensitive tokens)
+    try {
+      const { ConfigManager } = await import('@/utils/config');
+      const configManager = ConfigManager.getInstance();
+      const syncConfig = await configManager.getSyncConfig();
+
+      if (syncConfig) {
+                        // Create a sanitized version with empty tokens
+        const sanitizedSyncConfig = {
+          ...syncConfig,
+          providers: Object.fromEntries(
+            Object.entries(syncConfig.providers).map(([key, provider]) => {
+              if (!provider) return [key, provider];
+
+              // Sanitize sensitive fields by setting them to empty strings
+              const sanitized = { ...provider } as any;
+              if ('token' in sanitized) {
+                sanitized.token = '';
+              }
+              if ('credentials' in sanitized) {
+                sanitized.credentials = '';
+              }
+
+              return [key, sanitized];
+            })
+          )
+        };
+
+        const syncConfigPath = join(timestampedDir, 'sync-config.json');
+        await fs.writeFile(syncConfigPath, JSON.stringify(sanitizedSyncConfig, null, 2));
+      }
+    } catch (error) {
+      // Sync config backup is optional, don't fail the entire backup
+      console.log(chalk.yellow(`⚠️  Could not backup sync config: ${error}`));
+    }
+
+    return timestampedDir;
   }
 
   private async createPartialBackup(type: string, outputPath?: string): Promise<string> {

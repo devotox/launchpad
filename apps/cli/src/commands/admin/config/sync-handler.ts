@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 
 import { DataManager } from '@/utils/config/data-manager';
 import { ConfigManager } from '@/utils/config';
-import type { ConfigBundle } from '@/utils/config/types';
+import type { ConfigBundle, SyncConfig } from '@/utils/config/types';
 
 export class SyncHandler {
   private dataManager = DataManager.getInstance();
@@ -34,31 +34,37 @@ export class SyncHandler {
           const providerConfig = syncConfig.providers[providerToUse as keyof typeof syncConfig.providers];
 
           if (providerToUse === "github" && providerConfig) {
-            const githubConfig = providerConfig as any;
-            configToUse = {
-              ...configToUse,
-              repository: githubConfig.repository,
-              branch: githubConfig.branch,
-              token: githubConfig.token,
-              path: githubConfig.path,
-            };
-            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            const githubConfig = providerConfig as SyncConfig['providers']['github'];
+            if (githubConfig) {
+              configToUse = {
+                ...configToUse,
+                repository: githubConfig.repository,
+                branch: githubConfig.branch,
+                token: githubConfig.token,
+                path: githubConfig.path,
+              };
+              console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            }
           } else if (providerToUse === "gist" && providerConfig) {
-            const gistConfig = providerConfig as any;
-            configToUse = {
-              ...configToUse,
-              gistId: gistConfig.gistId,
-              fileName: gistConfig.fileName,
-              token: gistConfig.token,
-            };
-            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            const gistConfig = providerConfig as SyncConfig['providers']['gist'];
+            if (gistConfig) {
+              configToUse = {
+                ...configToUse,
+                gistId: gistConfig.gistId,
+                fileName: gistConfig.fileName,
+                token: gistConfig.token,
+              };
+              console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            }
           } else if (providerToUse === "local" && providerConfig) {
-            const localConfig = providerConfig as any;
-            configToUse = {
-              ...configToUse,
-              localPath: localConfig.path,
-            };
-            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            const localConfig = providerConfig as SyncConfig['providers']['local'];
+            if (localConfig) {
+              configToUse = {
+                ...configToUse,
+                localPath: localConfig.path,
+              };
+              console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            }
           }
         }
       }
@@ -129,6 +135,33 @@ export class SyncHandler {
 
       await this.dataManager.importConfigBundle(bundle);
 
+      // If the bundle contains sync config and we used a token to download, restore the token
+      if (bundle.syncConfig && configToUse.token) {
+        try {
+          // Get the current sync config after import
+          const currentSyncConfig = await this.configManager.getSyncConfig();
+
+          if (currentSyncConfig) {
+            // Restore the token that was used for download
+            if (providerToUse === "gist" && currentSyncConfig.providers.gist) {
+              await this.configManager.setSyncProvider("gist", {
+                ...currentSyncConfig.providers.gist,
+                token: configToUse.token
+              });
+              console.log(chalk.cyan("🔑 Restored download token to sync configuration"));
+            } else if (providerToUse === "github" && currentSyncConfig.providers.github) {
+              await this.configManager.setSyncProvider("github", {
+                ...currentSyncConfig.providers.github,
+                token: configToUse.token
+              });
+              console.log(chalk.cyan("🔑 Restored download token to sync configuration"));
+            }
+          }
+        } catch (error) {
+          console.warn(chalk.yellow(`⚠️  Could not restore token to sync config: ${error}`));
+        }
+      }
+
       // Update last sync time
       await this.configManager.updateSyncConfig({
         lastSync: new Date().toISOString(),
@@ -173,32 +206,38 @@ export class SyncHandler {
           const providerConfig = syncConfig.providers[providerToUse as keyof typeof syncConfig.providers];
 
           if (providerToUse === "github" && providerConfig) {
-            const githubConfig = providerConfig as any;
-            configToUse = {
-              ...configToUse,
-              repository: githubConfig.repository,
-              branch: githubConfig.branch,
-              token: githubConfig.token,
-              path: githubConfig.path,
-            };
-            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            const githubConfig = providerConfig as SyncConfig['providers']['github'];
+            if (githubConfig) {
+              configToUse = {
+                ...configToUse,
+                repository: githubConfig.repository,
+                branch: githubConfig.branch,
+                token: githubConfig.token,
+                path: githubConfig.path,
+              };
+              console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            }
           } else if (providerToUse === "gist" && providerConfig) {
-            const gistConfig = providerConfig as any;
-            configToUse = {
-              ...configToUse,
-              gistId: gistConfig.gistId,
-              fileName: gistConfig.fileName,
-              token: gistConfig.token,
-              description: gistConfig.description,
-            };
-            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            const gistConfig = providerConfig as SyncConfig['providers']['gist'];
+            if (gistConfig) {
+              configToUse = {
+                ...configToUse,
+                gistId: gistConfig.gistId,
+                fileName: gistConfig.fileName,
+                token: gistConfig.token,
+                description: gistConfig.description,
+              };
+              console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            }
           } else if (providerToUse === "local" && providerConfig) {
-            const localConfig = providerConfig as any;
-            configToUse = {
-              ...configToUse,
-              localPath: localConfig.path,
-            };
-            console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            const localConfig = providerConfig as SyncConfig['providers']['local'];
+            if (localConfig) {
+              configToUse = {
+                ...configToUse,
+                localPath: localConfig.path,
+              };
+              console.log(chalk.gray(`Using stored ${providerToUse} configuration...`));
+            }
           }
         }
       }
@@ -234,27 +273,42 @@ export class SyncHandler {
           return;
         }
 
+                // Check if we have stored gist config
+        const syncConfig = await this.configManager.getSyncConfig();
+        const hasStoredGistConfig = syncConfig?.providers.gist?.gistId;
+
+        // Save config first if we don't have it stored, regardless of upload success
+        if (!hasStoredGistConfig) {
+          console.log(chalk.cyan("🔧 Setting up Gist as your default sync provider..."));
+          await this.configManager.setSyncProvider("gist", {
+            gistId: configToUse.gistId || '',
+            fileName: configToUse.fileName || 'launchpad-config.json',
+            token: configToUse.token,
+            description: configToUse.description || 'Launchpad configuration',
+          });
+
+          // Set as default if no default provider set
+          if (!syncConfig?.defaultProvider || syncConfig.defaultProvider === 'gist') {
+            await this.configManager.setDefaultSyncProvider("gist");
+          }
+        }
+
         const resultGistId = await this.dataManager.uploadConfigToGist(bundle, {
           gistId: configToUse.gistId,
           fileName: configToUse.fileName,
           token: configToUse.token,
           description: configToUse.description,
-          saveConfig: !configToUse.gistId, // Save config when creating new gist
+          saveConfig: false, // We handle config saving here
         });
 
-        // If we created a new gist and don't have stored config, save it
+        // If we created a new gist, update the saved gist ID
         if (!configToUse.gistId && resultGistId) {
-          const syncConfig = await this.configManager.getSyncConfig();
-          if (!syncConfig?.providers.gist) {
-            console.log(chalk.cyan("🔧 Setting up Gist as your default sync provider..."));
-            await this.configManager.setSyncProvider("gist", {
-              gistId: resultGistId,
-              fileName: configToUse.fileName || 'launchpad-config.json',
-              token: configToUse.token,
-              description: configToUse.description || 'Launchpad configuration',
-            });
-            await this.configManager.setDefaultSyncProvider("gist");
-          }
+          await this.configManager.setSyncProvider("gist", {
+            gistId: resultGistId,
+            fileName: configToUse.fileName || 'launchpad-config.json',
+            token: configToUse.token,
+            description: configToUse.description || 'Launchpad configuration',
+          });
         }
       } else if (providerToUse === "local") {
         if (!configToUse.localPath) {
