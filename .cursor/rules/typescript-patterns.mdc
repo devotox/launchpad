@@ -1,9 +1,4 @@
 ---
-description:
-globs:
-alwaysApply: false
----
----
 description: TypeScript pattern matching and utility library standards
 globs: ["**/*.ts", "**/*.tsx"]
 alwaysApply: false

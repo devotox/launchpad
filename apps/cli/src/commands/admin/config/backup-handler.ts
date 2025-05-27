@@ -41,8 +41,8 @@ export class BackupHandler {
   }
 
   private async createPartialBackup(type: string, outputPath?: string): Promise<string> {
-    const validTypes = ['teams', 'setup-components', 'global-docs'];
-    if (!validTypes.includes(type)) {
+    const validTypes: BackupConfigType[] = ['teams', 'setup-components', 'global-docs'];
+    if (!validTypes.includes(type as BackupConfigType)) {
       throw new Error(`Invalid backup type: ${type}. Valid types: ${validTypes.join(', ')}`);
     }
 
@@ -75,7 +75,7 @@ export class BackupHandler {
       const backupPaths: string[] = [];
 
       for (const configType of configTypes) {
-        const backupPath = await this.dataManager.backupConfigFile(configType);
+        const backupPath = await this.dataManager.backupConfigFile(configType as BackupConfigType);
         backupPaths.push(backupPath);
       }
 

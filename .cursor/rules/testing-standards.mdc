@@ -1,9 +1,4 @@
 ---
-description:
-globs:
-alwaysApply: false
----
----
 description: Testing standards and best practices for Launchpad CLI
 globs: ["**/*.test.ts", "**/*.spec.ts", "**/*.ts", "**/*.tsx"]
 alwaysApply: false
