@@ -25,7 +25,7 @@ alwaysApply: false
 - Aim for **high test coverage** (80%+ for critical paths)
 
 ## Test Configuration
-- Use `globals: true` in vitest.config.ts (already configured)
+- Use `globals: false` in vitest.config.ts (all test helpers must be explicitly imported)
 - Test files should be named `*.test.ts` or `*.spec.ts`
 - Place test files alongside source files or in a dedicated `tests/` directory
 
