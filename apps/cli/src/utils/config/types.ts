@@ -43,7 +43,7 @@ export type Team = {
   lead: string;
   slackChannels: SlackChannels;
   repositories: Repository[];
-  tools: string[];
+  tools: string[] | Record<string, unknown>; // Support both old array and new unified structure
   teamSpecificDocs?: string[];
   config: TeamConfig;
 };

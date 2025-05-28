@@ -42,7 +42,7 @@
     "@total-typescript/ts-reset": "0.6.1",
     "@turbo/gen": "2.5.3",
     "eslint": "9.27.0",
-    "eslint-config-extreme": "1.0.45",
+    "eslint-config-extreme": "2.0.2",
     "oxlint": "0.16.12",
     "tsup": "8.5.0",
     "tsx": "4.19.4",

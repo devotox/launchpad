@@ -4,6 +4,8 @@ import inquirer from 'inquirer';
 import { ConfigManager } from '@/utils/config/manager';
 import { DataManager } from '@/utils/config/data-manager';
 import { RepositoryManager } from '@/utils/repository';
+import { promises as fs } from 'node:fs';
+import { join } from 'node:path';
 
 type InitAnswers = {
   name: string;
@@ -28,19 +30,66 @@ type ConfigDownloadOptions = {
   localPath?: string;
 };
 
+type InitCheckpoint = {
+  version: string;
+  timestamp: string;
+  step: 'essential-tools' | 'config-download' | 'user-input' | 'config-creation' | 'github-auth' | 'repo-cloning' | 'completed';
+  answers?: Partial<InitAnswers>;
+  configDownloadOptions?: ConfigDownloadOptions;
+  needsSetup?: boolean;
+  force?: boolean;
+};
+
 export class InitCommand {
+  private checkpointFile: string;
+
+  constructor() {
+    const configManager = ConfigManager.getInstance();
+    this.checkpointFile = join(configManager.getConfigDir(), '.init-checkpoint.json');
+  }
+
   getCommand(): Command {
     return new Command('init')
       .description('Initialize your developer workspace')
       .option('--force', 'Force re-initialization even if config exists')
+      .option('--resume', 'Resume from last checkpoint if available')
+      .option('--clean', 'Remove any existing checkpoint and start fresh')
       .action(async (options) => {
-        await this.execute(options.force);
+        await this.execute(options.force, options.resume, options.clean);
       });
   }
 
-  async execute(force = false): Promise<void> {
+  async execute(force = false, resume = false, clean = false): Promise<void> {
     const configManager = ConfigManager.getInstance();
     const dataManager = DataManager.getInstance();
+
+    // Handle clean option
+    if (clean) {
+      await this.clearCheckpoint();
+      console.log(chalk.green('✅ Checkpoint cleared. Starting fresh initialization.'));
+    }
+
+    // Check for existing checkpoint
+    const checkpoint = await this.loadCheckpoint();
+    if (checkpoint && !clean && !force) {
+      console.log(chalk.yellow('🔄 Previous initialization was interrupted.'));
+      console.log(chalk.gray(`Last step: ${checkpoint.step}`));
+      console.log(chalk.gray(`Timestamp: ${new Date(checkpoint.timestamp).toLocaleString()}`));
+
+      const { shouldResume } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'shouldResume',
+          message: 'Would you like to resume from where you left off?',
+          default: true
+        }
+      ]);
+
+      if (shouldResume) {
+        return this.resumeFromCheckpoint(checkpoint);
+      }
+      await this.clearCheckpoint();
+    }
 
     // Check if config already exists
     if (!force && (await configManager.hasConfig())) {
@@ -48,57 +97,256 @@ export class InitCommand {
       console.log(chalk.yellow('⚠️  Launchpad is already initialized!'));
       console.log(chalk.gray(`Config found at: ${configManager.getConfigPath()}`));
       console.log(chalk.gray(`Current team: ${existingConfig?.user.team}`));
-      console.log(chalk.gray('Use --force to re-initialize'));
+      console.log(chalk.gray('Use --force to re-initialize or --resume to continue setup'));
       return;
     }
 
     console.log(chalk.cyan('🚀 Welcome to LoveHolidays Launchpad!'));
     console.log(chalk.gray("Let's set up your developer workspace...\n"));
 
-    // Check if essential tools are installed
-    const needsSetup = await this.checkEssentialTools();
-    if (needsSetup) {
-      console.log(chalk.yellow('⚠️  Some essential development tools are missing.'));
-      console.log(chalk.gray('Launchpad requires certain tools to be installed first.\n'));
+    // Start fresh initialization
+    await this.runFullInitialization(force);
+  }
 
-      const { runSetup } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'runSetup',
-          message: 'Would you like to run the setup process now? (Recommended)',
-          default: true
+  private async runFullInitialization(force = false): Promise<void> {
+    try {
+      // Step 1: Essential tools check
+      await this.saveCheckpoint({
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        step: 'essential-tools',
+        force
+      });
+
+      const needsSetup = await this.checkEssentialTools();
+      if (needsSetup) {
+        console.log(chalk.yellow('⚠️  Some essential development tools are missing.'));
+        console.log(chalk.gray('Launchpad requires certain tools to be installed first.\n'));
+
+        const { runSetup } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'runSetup',
+            message: 'Would you like to run the setup process now? (Recommended)',
+            default: true
+          }
+        ]);
+
+        if (runSetup) {
+          console.log(chalk.cyan('\n🔧 Running essential tools setup...'));
+          console.log(
+            chalk.gray(
+              'This will install: Homebrew, Git, Node.js (via Volta), PNPM, and GitHub CLI\n'
+            )
+          );
+
+          // Import and run setup command
+          const { SetupCommand } = await import('@/commands/setup/core/setup-command');
+          const setupCommand = new SetupCommand();
+          await setupCommand.runEssentialChoiceSetup();
+
+          console.log(chalk.green('\n✅ Essential tools setup completed!'));
+          console.log(chalk.gray('Continuing with workspace initialization...\n'));
+        } else {
+          console.log(
+            chalk.yellow('\n⚠️  Continuing without setup. Some features may not work properly.')
+          );
+          console.log(
+            chalk.gray('You can run setup later with: launchpad setup essential\n')
+          );
         }
-      ]);
-
-      if (runSetup) {
-        console.log(chalk.cyan('\n🔧 Running essential tools setup...'));
-        console.log(
-          chalk.gray(
-            'This will install: Homebrew, Git, Node.js (via Volta), PNPM, and GitHub CLI\n'
-          )
-        );
-
-        // Import and run setup command
-        const { SetupCommand } = await import('@/commands/setup/core/setup-command');
-        const setupCommand = new SetupCommand();
-        await setupCommand.runEssentialChoiceSetup();
-
-        console.log(chalk.green('\n✅ Essential tools setup completed!'));
-        console.log(chalk.gray('Continuing with workspace initialization...\n'));
-      } else {
-        console.log(
-          chalk.yellow('\n⚠️  Continuing without setup. Some features may not work properly.')
-        );
-        console.log(
-          chalk.gray('You can run setup later with: launchpad setup essential\n')
-        );
       }
+
+      // Step 2: Download initial configuration
+      await this.saveCheckpoint({
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        step: 'config-download',
+        needsSetup,
+        force
+      });
+
+      await this.downloadInitialConfig();
+
+      // Step 3: User input
+      await this.saveCheckpoint({
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        step: 'user-input',
+        needsSetup,
+        force
+      });
+
+      const answers = await this.collectUserInput();
+
+      // Step 4: Config creation
+      await this.saveCheckpoint({
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        step: 'config-creation',
+        answers,
+        needsSetup,
+        force
+      });
+
+      await this.createConfiguration(answers);
+
+      // Step 5: GitHub authentication
+      if (answers.setupGitHub) {
+        await this.saveCheckpoint({
+          version: '1.0.0',
+          timestamp: new Date().toISOString(),
+          step: 'github-auth',
+          answers,
+          needsSetup,
+          force
+        });
+
+        await this.setupGitHubAuthentication();
+      }
+
+      // Step 6: Repository cloning
+      if (answers.cloneRepos) {
+        await this.saveCheckpoint({
+          version: '1.0.0',
+          timestamp: new Date().toISOString(),
+          step: 'repo-cloning',
+          answers,
+          needsSetup,
+          force
+        });
+
+        await this.handleRepositoryCloning(answers);
+      }
+
+      // Step 7: Completion
+      await this.saveCheckpoint({
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        step: 'completed',
+        answers,
+        needsSetup,
+        force
+      });
+
+      await this.showCompletionMessage(answers);
+
+      // Clear checkpoint on successful completion
+      await this.clearCheckpoint();
+
+    } catch (error) {
+      console.error(chalk.red('\n❌ Initialization failed:'), error);
+      console.log(chalk.yellow('\n💡 Your progress has been saved.'));
+      console.log(chalk.gray('Run "launchpad init --resume" to continue from where you left off.'));
+      throw error;
     }
+  }
 
-    // Download initial configuration (teams, components, docs)
-    await this.downloadInitialConfig();
+  private async resumeFromCheckpoint(checkpoint: InitCheckpoint): Promise<void> {
+    console.log(chalk.cyan(`\n🔄 Resuming initialization from: ${checkpoint.step}`));
+    console.log(chalk.gray('─'.repeat(50)));
 
-        let teamChoices = await dataManager.getTeamChoices();
+    const dataManager = DataManager.getInstance();
+
+    try {
+      switch (checkpoint.step) {
+        case 'essential-tools':
+          console.log(chalk.gray('Resuming from essential tools check...'));
+          await this.runFullInitialization(checkpoint.force);
+          break;
+
+        case 'config-download': {
+          console.log(chalk.gray('Resuming from configuration download...'));
+          await this.downloadInitialConfig();
+          const answers1 = await this.collectUserInput();
+          await this.createConfiguration(answers1);
+          if (answers1.setupGitHub) await this.setupGitHubAuthentication();
+          if (answers1.cloneRepos) await this.handleRepositoryCloning(answers1);
+          await this.showCompletionMessage(answers1);
+          break;
+        }
+
+        case 'user-input': {
+          console.log(chalk.gray('Resuming from user input collection...'));
+          const answers2 = await this.collectUserInput();
+          await this.createConfiguration(answers2);
+          if (answers2.setupGitHub) await this.setupGitHubAuthentication();
+          if (answers2.cloneRepos) await this.handleRepositoryCloning(answers2);
+          await this.showCompletionMessage(answers2);
+          break;
+        }
+
+        case 'config-creation': {
+          if (!checkpoint.answers) {
+            console.log(chalk.yellow('⚠️  No saved answers found. Starting from user input...'));
+            const answers3 = await this.collectUserInput();
+            await this.createConfiguration(answers3);
+            if (answers3.setupGitHub) await this.setupGitHubAuthentication();
+            if (answers3.cloneRepos) await this.handleRepositoryCloning(answers3);
+            await this.showCompletionMessage(answers3);
+          } else {
+            console.log(chalk.gray('Resuming from configuration creation...'));
+            const answers = checkpoint.answers as InitAnswers;
+            await this.createConfiguration(answers);
+            if (answers.setupGitHub) await this.setupGitHubAuthentication();
+            if (answers.cloneRepos) await this.handleRepositoryCloning(answers);
+            await this.showCompletionMessage(answers);
+          }
+          break;
+        }
+
+        case 'github-auth': {
+          if (!checkpoint.answers) {
+            console.log(chalk.yellow('⚠️  No saved answers found. Cannot resume GitHub auth.'));
+            return;
+          }
+          console.log(chalk.gray('Resuming from GitHub authentication...'));
+          const answers4 = checkpoint.answers as InitAnswers;
+          if (answers4.setupGitHub) await this.setupGitHubAuthentication();
+          if (answers4.cloneRepos) await this.handleRepositoryCloning(answers4);
+          await this.showCompletionMessage(answers4);
+          break;
+        }
+
+        case 'repo-cloning': {
+          if (!checkpoint.answers) {
+            console.log(chalk.yellow('⚠️  No saved answers found. Cannot resume repository cloning.'));
+            return;
+          }
+          console.log(chalk.gray('Resuming from repository cloning...'));
+          const answers5 = checkpoint.answers as InitAnswers;
+          if (answers5.cloneRepos) await this.handleRepositoryCloning(answers5);
+          await this.showCompletionMessage(answers5);
+          break;
+        }
+
+        case 'completed':
+          console.log(chalk.green('✅ Initialization was already completed!'));
+          if (checkpoint.answers) {
+            await this.showCompletionMessage(checkpoint.answers as InitAnswers);
+          }
+          break;
+
+        default:
+          console.log(chalk.yellow('⚠️  Unknown checkpoint step. Starting fresh...'));
+          await this.runFullInitialization(checkpoint.force);
+      }
+
+      // Clear checkpoint on successful completion
+      await this.clearCheckpoint();
+
+    } catch (error) {
+      console.error(chalk.red('\n❌ Resume failed:'), error);
+      console.log(chalk.yellow('\n💡 Your progress has been saved.'));
+      console.log(chalk.gray('You can try resuming again with: launchpad init --resume'));
+      throw error;
+    }
+  }
+
+  private async collectUserInput(): Promise<InitAnswers> {
+    const dataManager = DataManager.getInstance();
+
+    let teamChoices = await dataManager.getTeamChoices();
 
     // Always add a "None/Skip" option for users who don't have teams yet
     if (teamChoices.length === 0) {
@@ -118,7 +366,7 @@ export class InitCommand {
       }
     ];
 
-    const answers = await inquirer.prompt<InitAnswers>([
+    return inquirer.prompt<InitAnswers>([
       {
         type: 'input',
         name: 'name',
@@ -173,7 +421,7 @@ export class InitCommand {
         name: 'setupGitHub',
         message: 'Would you like to verify GitHub authentication (required for repository access)?',
         default: true,
-        when: () => !needsSetup // Only ask if setup wasn't needed/run
+        when: () => true // Always ask this question
       },
       {
         type: 'confirm',
@@ -200,6 +448,11 @@ export class InitCommand {
         when: (answers) => answers.cloneRepos
       }
     ]);
+  }
+
+  private async createConfiguration(answers: InitAnswers): Promise<void> {
+    const configManager = ConfigManager.getInstance();
+    const dataManager = DataManager.getInstance();
 
     // Create config
     const config = await configManager.createDefaultConfig(
@@ -238,11 +491,6 @@ export class InitCommand {
       }
     }
 
-    // Setup GitHub authentication if requested
-    if (answers.setupGitHub) {
-      await this.setupGitHubAuthentication();
-    }
-
     if (team) {
       console.log(chalk.cyan(`\n👥 Welcome to the ${team.name} team!`));
       console.log(chalk.gray(`Team lead: ${team.lead}`));
@@ -256,14 +504,27 @@ export class InitCommand {
       if (team.slackChannels.social) {
         console.log(chalk.gray(`Social channel: ${team.slackChannels.social}`));
       }
-      console.log(chalk.gray(`Tools: ${team.tools.join(', ')}`));
-      console.log(chalk.gray(`Default branch: ${team.config.defaultBranch}`));
-      console.log(chalk.gray(`CI/CD: ${team.config.cicdPipeline}`));
-      console.log(chalk.gray(`Monitoring: ${team.config.monitoringTools.join(', ')}`));
-      if (team.config.communicationPreferences.standupTime) {
+      // Handle both old array format and new unified tools structure
+      if (Array.isArray(team.tools)) {
+        console.log(chalk.gray(`Tools: ${team.tools.join(', ')}`));
+      } else if (team.tools && typeof team.tools === 'object') {
+        // New unified structure - show count of categories
+        const categoryCount = Object.keys(team.tools).length;
+        console.log(chalk.gray(`Tools: ${categoryCount} categories configured`));
+      } else {
+        console.log(chalk.gray('Tools: None configured'));
+      }
+      console.log(chalk.gray(`Default branch: ${team.config.defaultBranch || 'main'}`));
+      console.log(chalk.gray(`CI/CD: ${team.config.cicdPipeline || 'Not configured'}`));
+      if (team.config.monitoringTools && Array.isArray(team.config.monitoringTools)) {
+        console.log(chalk.gray(`Monitoring: ${team.config.monitoringTools.join(', ')}`));
+      } else {
+        console.log(chalk.gray('Monitoring: Not configured'));
+      }
+      if (team.config.communicationPreferences?.standupTime) {
         console.log(
           chalk.gray(
-            `Daily standup: ${team.config.communicationPreferences.standupTime} (${team.config.communicationPreferences.timezone})`
+            `Daily standup: ${team.config.communicationPreferences.standupTime} (${team.config.communicationPreferences.timezone || 'UTC'})`
           )
         );
       }
@@ -271,56 +532,79 @@ export class InitCommand {
       console.log(chalk.cyan('\n👤 Individual Setup Complete!'));
       console.log(chalk.gray('You can join a team later with: launchpad admin teams add'));
     }
+  }
 
-    // Clone repositories if requested
-    if (answers.cloneRepos && team) {
-      console.log(chalk.cyan('\n📦 Cloning Team Repositories'));
-      console.log(chalk.gray('─'.repeat(30)));
+  private async handleRepositoryCloning(answers: InitAnswers): Promise<void> {
+    const configManager = ConfigManager.getInstance();
+    const dataManager = DataManager.getInstance();
 
-      const repoManager = new RepositoryManager(answers.workspacePath);
-      const onlyRequired = answers.cloneType === 'required';
+    // Get team information
+    let team = null;
+    if (answers.team !== 'none') {
+      team = await dataManager.getTeamById(answers.team);
+    }
 
-      try {
-        const clonedRepos = await repoManager.cloneRepositories(team.repositories, onlyRequired);
+    if (!team) {
+      console.log(chalk.yellow('\n⚠️  No team selected. Skipping repository cloning.'));
+      return;
+    }
 
-        // Update config with cloned repositories
-        await configManager.updateConfig({
-          workspace: {
-            name: answers.workspaceName,
-            path: answers.workspacePath,
-            repositories: clonedRepos
-          }
-        });
+    console.log(chalk.cyan('\n📦 Cloning Team Repositories'));
+    console.log(chalk.gray('─'.repeat(30)));
 
-        // Setup dependencies if requested
-        if (answers.setupDependencies && clonedRepos.length > 0) {
-          await repoManager.setupRepositories(clonedRepos);
+    const repoManager = new RepositoryManager(answers.workspacePath);
+    const onlyRequired = answers.cloneType === 'required';
+
+    try {
+      const clonedRepos = await repoManager.cloneRepositories(team.repositories, onlyRequired);
+
+      // Update config with cloned repositories
+      await configManager.updateConfig({
+        workspace: {
+          name: answers.workspaceName,
+          path: answers.workspacePath,
+          repositories: clonedRepos
         }
+      });
 
-        if (clonedRepos.length > 0) {
-          console.log(chalk.green(`\n✅ Successfully set up ${clonedRepos.length} repositories!`));
-        } else {
-          console.log(chalk.yellow('\n⚠️  No repositories were cloned.'));
-          console.log(chalk.gray('This might be due to authentication issues.'));
-          console.log(chalk.cyan('\n🔧 Troubleshooting:'));
-          console.log(chalk.gray('1. Install GitHub CLI if not already installed:'));
-          console.log(chalk.gray('   • macOS: brew install gh (requires Homebrew)'));
-          console.log(chalk.gray('   • Linux: https://cli.github.com/'));
-          console.log(chalk.gray('   • Windows: winget install --id GitHub.cli'));
-          console.log(chalk.gray('2. Authenticate with GitHub: gh auth login'));
-          console.log(chalk.gray('3. Set up SAML SSO for LoveHolidays organization'));
-          console.log(chalk.gray('4. Test access with: gh repo list loveholidays'));
-          console.log(chalk.gray('5. Try cloning manually: git clone [repo-url]'));
-          console.log(chalk.gray('6. Re-run init with: launchpad init --force'));
-        }
-      } catch (error) {
-        console.log(chalk.red('\n❌ Repository cloning encountered issues.'));
-        console.log(chalk.gray(`Error: ${error}`));
-        console.log(chalk.cyan('\n🔧 Next Steps:'));
-        console.log(chalk.gray('1. Complete GitHub SSO setup if not done'));
-        console.log(chalk.gray('2. Test repository access manually'));
-        console.log(chalk.gray('3. Re-run initialization: launchpad init --force'));
+      // Setup dependencies if requested
+      if (answers.setupDependencies && clonedRepos.length > 0) {
+        await repoManager.setupRepositories(clonedRepos);
       }
+
+      if (clonedRepos.length > 0) {
+        console.log(chalk.green(`\n✅ Successfully set up ${clonedRepos.length} repositories!`));
+      } else {
+        console.log(chalk.yellow('\n⚠️  No repositories were cloned.'));
+        console.log(chalk.gray('This might be due to authentication issues.'));
+        console.log(chalk.cyan('\n🔧 Troubleshooting:'));
+        console.log(chalk.gray('1. Install GitHub CLI if not already installed:'));
+        console.log(chalk.gray('   • macOS: brew install gh (requires Homebrew)'));
+        console.log(chalk.gray('   • Linux: https://cli.github.com/'));
+        console.log(chalk.gray('   • Windows: winget install --id GitHub.cli'));
+        console.log(chalk.gray('2. Authenticate with GitHub: gh auth login'));
+        console.log(chalk.gray('3. Set up SAML SSO for LoveHolidays organization'));
+        console.log(chalk.gray('4. Test access with: gh repo list loveholidays'));
+        console.log(chalk.gray('5. Try cloning manually: git clone [repo-url]'));
+        console.log(chalk.gray('6. Re-run init with: launchpad init --force'));
+      }
+    } catch (error) {
+      console.log(chalk.red('\n❌ Repository cloning encountered issues.'));
+      console.log(chalk.gray(`Error: ${error}`));
+      console.log(chalk.cyan('\n🔧 Next Steps:'));
+      console.log(chalk.gray('1. Complete GitHub SSO setup if not done'));
+      console.log(chalk.gray('2. Test repository access manually'));
+      console.log(chalk.gray('3. Re-run initialization: launchpad init --force'));
+    }
+  }
+
+  private async showCompletionMessage(answers: InitAnswers): Promise<void> {
+    const dataManager = DataManager.getInstance();
+
+    // Get team information for onboarding resources
+    let team = null;
+    if (answers.team !== 'none') {
+      team = await dataManager.getTeamById(answers.team);
     }
 
     // Show onboarding resources
@@ -340,7 +624,7 @@ export class InitCommand {
     console.log(chalk.cyan('\n🎯 Next Steps:'));
     console.log(chalk.green('  1. 📖 Start with the MMB Team Onboarding Guide (link above)'));
     console.log(chalk.gray("  2. Join your team's Slack channels"));
-    if (!answers.setupGitHub && !needsSetup) {
+    if (!answers.setupGitHub) {
       console.log(chalk.yellow('  3. 🔐 Set up GitHub authentication: gh auth login'));
       console.log(chalk.yellow('  4. 🔒 Configure SAML SSO for LoveHolidays organization'));
       console.log(chalk.gray('  5. Set up your development environment: launchpad setup all'));
@@ -374,6 +658,34 @@ export class InitCommand {
     console.log(
       chalk.cyan("💡 Tip: Use 'launchpad team --help' to explore team-specific commands")
     );
+  }
+
+  private async saveCheckpoint(checkpoint: InitCheckpoint): Promise<void> {
+    try {
+      const configManager = ConfigManager.getInstance();
+      await configManager.ensureConfigDir();
+      await fs.writeFile(this.checkpointFile, JSON.stringify(checkpoint, null, 2));
+    } catch (error) {
+      // Don't fail the entire process if checkpoint saving fails
+      console.warn(chalk.yellow('⚠️  Could not save checkpoint:'), error);
+    }
+  }
+
+  private async loadCheckpoint(): Promise<InitCheckpoint | null> {
+    try {
+      const content = await fs.readFile(this.checkpointFile, 'utf-8');
+      return JSON.parse(content) as InitCheckpoint;
+    } catch {
+      return null;
+    }
+  }
+
+  private async clearCheckpoint(): Promise<void> {
+    try {
+      await fs.unlink(this.checkpointFile);
+    } catch {
+      // File doesn't exist or can't be deleted - that's fine
+    }
   }
 
   private async setupGitHubAuthentication(): Promise<void> {
@@ -615,7 +927,7 @@ export class InitCommand {
     console.log(chalk.gray('   git clone https://github.com/loveholidays/[repo-name].git'));
   }
 
-    private async downloadInitialConfig(): Promise<void> {
+  private async downloadInitialConfig(): Promise<void> {
     console.log(chalk.cyan('📥 Initial Configuration Setup'));
     console.log(chalk.gray('This will download teams, setup components, and documentation\n'));
 
