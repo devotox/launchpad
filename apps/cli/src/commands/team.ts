@@ -79,8 +79,8 @@ export class TeamCommand {
     if (team.slackChannels.main) {
       console.log(`   ${chalk.green('●')} Main: ${chalk.white(team.slackChannels.main)}`);
     }
-    if (team.slackChannels.dev) {
-      console.log(`   ${chalk.blue('●')} Dev: ${chalk.white(team.slackChannels.dev)}`);
+    if ((team.slackChannels as any).dev) {
+      console.log(`   ${chalk.blue('●')} Dev: ${chalk.white((team.slackChannels as any).dev)}`);
     }
     if (team.slackChannels.alerts) {
       console.log(`   ${chalk.red('●')} Alerts: ${chalk.white(team.slackChannels.alerts)}`);
@@ -88,8 +88,8 @@ export class TeamCommand {
     if (team.slackChannels.support) {
       console.log(`   ${chalk.yellow('●')} Support: ${chalk.white(team.slackChannels.support)}`);
     }
-    if (team.slackChannels.updates) {
-      console.log(`   ${chalk.magenta('●')} Updates: ${chalk.white(team.slackChannels.updates)}`);
+    if ((team.slackChannels as any).updates) {
+      console.log(`   ${chalk.magenta('●')} Updates: ${chalk.white((team.slackChannels as any).updates)}`);
     }
     console.log('');
 
@@ -98,30 +98,53 @@ export class TeamCommand {
     console.log(chalk.gray('─'.repeat(15)));
     for (const repo of team.repositories) {
       const requiredIcon = repo.required ? chalk.red('🔴') : chalk.gray('⚪');
-      const typeColor = repo.type === 'backend' ? chalk.blue : repo.type === 'frontend' ? chalk.green : chalk.gray;
+      let typeColor;
+      if (repo.type === 'backend') {
+        typeColor = chalk.blue;
+      } else if (repo.type === 'frontend') {
+        typeColor = chalk.green;
+      } else {
+        typeColor = chalk.gray;
+      }
       console.log(`   ${requiredIcon} ${typeColor(repo.name)} - ${chalk.gray(repo.description)}`);
     }
     console.log('');
 
-    // Tools & Tech Stack
-    console.log(chalk.cyan('🛠️  Tech Stack'));
-    console.log(chalk.gray('─'.repeat(15)));
-    const toolsPerRow = 4;
-    for (let i = 0; i < team.tools.length; i += toolsPerRow) {
-      const toolsRow = team.tools.slice(i, i + toolsPerRow);
-      console.log(`   ${toolsRow.map(tool => chalk.white(`• ${tool}`)).join('  ')}`);
-    }
-    console.log('');
-
-    // Team-Specific Documentation
-    const teamSpecificDocs = await dataManager.getTeamSpecificDocs(config.user.team);
-    if (teamSpecificDocs.length > 0) {
-      console.log(chalk.cyan('📚 Team Documentation'));
+    // Tools & Resources (new unified structure)
+    if ((team as any).tools) {
+      console.log(chalk.cyan('🔧 Tools & Resources'));
       console.log(chalk.gray('─'.repeat(25)));
-      for (const doc of teamSpecificDocs) {
-        const [title, url] = doc.split(': ');
-        console.log(`   ${chalk.green('📖')} ${chalk.white(title)}`);
-        console.log(`      ${chalk.gray(url)}`);
+
+      for (const [categoryKey, category] of Object.entries((team as any).tools)) {
+        const categoryData = category as any;
+        const icon = categoryData.icon ?? '🔧'; // Default icon if none specified
+        console.log(`   ${icon} ${chalk.yellow(categoryData.name)}:`);
+
+        if (Array.isArray(categoryData.items)) {
+          // Simple list (like development tools)
+          const itemsPerRow = 4;
+          for (let i = 0; i < categoryData.items.length; i += itemsPerRow) {
+            const itemsRow = categoryData.items.slice(i, i + itemsPerRow);
+            const formattedItems = itemsRow.map((tool: string) => chalk.white(`• ${tool}`));
+            console.log(`     ${formattedItems.join('  ')}`);
+          }
+        } else {
+          // Object with URLs and descriptions
+          for (const [itemName, itemData] of Object.entries(categoryData.items)) {
+            if (typeof itemData === 'string') {
+              // Simple URL
+              console.log(`     ${chalk.gray('•')} ${chalk.white(itemName)}`);
+              console.log(`       ${chalk.gray(itemData)}`);
+            } else {
+              // Object with description
+              const item = itemData as any;
+              console.log(`     ${chalk.gray('•')} ${chalk.white(itemName)} - ${chalk.gray(item.description || '')}`);
+              if (item.url) {
+                console.log(`       ${chalk.gray(item.url)}`);
+              }
+            }
+          }
+        }
         console.log('');
       }
     }
@@ -156,7 +179,8 @@ export class TeamCommand {
             console.log(`     ${chalk.gray('•')} ${chalk.white(title)}`);
           });
           if (docs.length > 3) {
-            console.log(`     ${chalk.gray(`... and ${docs.length - 3} more`)}`);
+            const moreCount = docs.length - 3;
+            console.log(`     ${chalk.gray(`... and ${moreCount} more`)}`);
           }
           console.log('');
         }
@@ -380,7 +404,12 @@ export class TeamCommand {
     console.log(
       chalk.white(`• Code Review: ${teamConfig.codeReviewRequired ? 'Required' : 'Optional'}`)
     );
-    console.log(chalk.white(`• Tools: ${team.tools.slice(0, 4).join(', ')}`));
+
+    // Show development tools from new structure
+    const devTools = (team as any).tools?.development?.items;
+    if (devTools && Array.isArray(devTools)) {
+      console.log(chalk.white(`• Tools: ${devTools.slice(0, 4).join(', ')}`));
+    }
 
     // Communication
     if (teamConfig.communicationPreferences.standupTime) {
