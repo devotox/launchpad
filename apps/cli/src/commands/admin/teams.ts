@@ -107,7 +107,7 @@ export class TeamsCommand {
       .otherwise(async () => Promise.resolve());
   }
 
-  private async addTeam(): Promise<void> {
+  async addTeam(): Promise<void> {
     console.log(chalk.cyan('\n➕ Add New Team'));
     console.log(chalk.gray('─'.repeat(20)));
 

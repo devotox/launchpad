@@ -17,6 +17,17 @@ type InitAnswers = {
   setupGitHub?: boolean;
 };
 
+type ConfigDownloadOptions = {
+  provider: string;
+  gistId?: string;
+  token?: string;
+  fileName?: string;
+  repository?: string;
+  branch?: string;
+  path?: string;
+  localPath?: string;
+};
+
 export class InitCommand {
   getCommand(): Command {
     return new Command('init')
@@ -84,7 +95,28 @@ export class InitCommand {
       }
     }
 
-    const teamChoices = await dataManager.getTeamChoices();
+    // Download initial configuration (teams, components, docs)
+    await this.downloadInitialConfig();
+
+        let teamChoices = await dataManager.getTeamChoices();
+
+    // Always add a "None/Skip" option for users who don't have teams yet
+    if (teamChoices.length === 0) {
+      console.log(chalk.yellow('\n⚠️  No teams found in configuration.'));
+      console.log(chalk.gray('You can set up your team later with: launchpad admin teams add'));
+      console.log('');
+    }
+
+    // Add the "None" option to allow users to skip team selection
+    teamChoices = [
+      ...teamChoices,
+      {
+        name: teamChoices.length === 0
+          ? 'None - Set up team later (Recommended for now)'
+          : 'None - Set up team later',
+        value: 'none'
+      }
+    ];
 
     const answers = await inquirer.prompt<InitAnswers>([
       {
@@ -196,11 +228,14 @@ export class InitCommand {
     console.log(chalk.green('\n✅ Configuration saved successfully!'));
     console.log(chalk.gray(`Config location: ${configManager.getConfigPath()}`));
 
-    // Get team information
-    const team = await dataManager.getTeamById(answers.team);
-    if (!team) {
-      console.error(chalk.red('❌ Team not found'));
-      return;
+    // Get team information (if a team was selected)
+    let team = null;
+    if (answers.team !== 'none') {
+      team = await dataManager.getTeamById(answers.team);
+      if (!team) {
+        console.error(chalk.red('❌ Team not found'));
+        return;
+      }
     }
 
     // Setup GitHub authentication if requested
@@ -208,32 +243,37 @@ export class InitCommand {
       await this.setupGitHubAuthentication();
     }
 
-    console.log(chalk.cyan(`\n👥 Welcome to the ${team.name} team!`));
-    console.log(chalk.gray(`Team lead: ${team.lead}`));
-    console.log(chalk.gray(`Main Slack channel: ${team.slackChannels.main}`));
-    if (team.slackChannels.standup) {
-      console.log(chalk.gray(`Standup channel: ${team.slackChannels.standup}`));
-    }
-    if (team.slackChannels.alerts) {
-      console.log(chalk.gray(`Alerts channel: ${team.slackChannels.alerts}`));
-    }
-    if (team.slackChannels.social) {
-      console.log(chalk.gray(`Social channel: ${team.slackChannels.social}`));
-    }
-    console.log(chalk.gray(`Tools: ${team.tools.join(', ')}`));
-    console.log(chalk.gray(`Default branch: ${team.config.defaultBranch}`));
-    console.log(chalk.gray(`CI/CD: ${team.config.cicdPipeline}`));
-    console.log(chalk.gray(`Monitoring: ${team.config.monitoringTools.join(', ')}`));
-    if (team.config.communicationPreferences.standupTime) {
-      console.log(
-        chalk.gray(
-          `Daily standup: ${team.config.communicationPreferences.standupTime} (${team.config.communicationPreferences.timezone})`
-        )
-      );
+    if (team) {
+      console.log(chalk.cyan(`\n👥 Welcome to the ${team.name} team!`));
+      console.log(chalk.gray(`Team lead: ${team.lead}`));
+      console.log(chalk.gray(`Main Slack channel: ${team.slackChannels.main}`));
+      if (team.slackChannels.standup) {
+        console.log(chalk.gray(`Standup channel: ${team.slackChannels.standup}`));
+      }
+      if (team.slackChannels.alerts) {
+        console.log(chalk.gray(`Alerts channel: ${team.slackChannels.alerts}`));
+      }
+      if (team.slackChannels.social) {
+        console.log(chalk.gray(`Social channel: ${team.slackChannels.social}`));
+      }
+      console.log(chalk.gray(`Tools: ${team.tools.join(', ')}`));
+      console.log(chalk.gray(`Default branch: ${team.config.defaultBranch}`));
+      console.log(chalk.gray(`CI/CD: ${team.config.cicdPipeline}`));
+      console.log(chalk.gray(`Monitoring: ${team.config.monitoringTools.join(', ')}`));
+      if (team.config.communicationPreferences.standupTime) {
+        console.log(
+          chalk.gray(
+            `Daily standup: ${team.config.communicationPreferences.standupTime} (${team.config.communicationPreferences.timezone})`
+          )
+        );
+      }
+    } else {
+      console.log(chalk.cyan('\n👤 Individual Setup Complete!'));
+      console.log(chalk.gray('You can join a team later with: launchpad admin teams add'));
     }
 
     // Clone repositories if requested
-    if (answers.cloneRepos) {
+    if (answers.cloneRepos && team) {
       console.log(chalk.cyan('\n📦 Cloning Team Repositories'));
       console.log(chalk.gray('─'.repeat(30)));
 
@@ -284,16 +324,18 @@ export class InitCommand {
     }
 
     // Show onboarding resources
-    console.log(chalk.cyan('\n📚 Essential Onboarding Resources:'));
-    const onboardingDocs = await dataManager.getAllOnboardingDocs(team.id);
-    onboardingDocs.forEach((doc: string, index: number) => {
-      if (index === 0) {
-        // Highlight the main onboarding guide
-        console.log(chalk.green(`  🎯 ${doc}`));
-      } else {
-        console.log(chalk.gray(`  • ${doc}`));
-      }
-    });
+    if (team) {
+      console.log(chalk.cyan('\n📚 Essential Onboarding Resources:'));
+      const onboardingDocs = await dataManager.getAllOnboardingDocs(team.id);
+      onboardingDocs.forEach((doc: string, index: number) => {
+        if (index === 0) {
+          // Highlight the main onboarding guide
+          console.log(chalk.green(`  🎯 ${doc}`));
+        } else {
+          console.log(chalk.gray(`  • ${doc}`));
+        }
+      });
+    }
 
     console.log(chalk.cyan('\n🎯 Next Steps:'));
     console.log(chalk.green('  1. 📖 Start with the MMB Team Onboarding Guide (link above)'));
@@ -571,6 +613,140 @@ export class InitCommand {
     console.log(chalk.cyan('\n💡 After SSO setup, test repository access with:'));
     console.log(chalk.gray('   gh repo list loveholidays'));
     console.log(chalk.gray('   git clone https://github.com/loveholidays/[repo-name].git'));
+  }
+
+    private async downloadInitialConfig(): Promise<void> {
+    console.log(chalk.cyan('📥 Initial Configuration Setup'));
+    console.log(chalk.gray('This will download teams, setup components, and documentation\n'));
+
+    // Ask if they want to download configuration
+    const { downloadConfig } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'downloadConfig',
+        message: 'Do you have access to a shared configuration (teams, components)?',
+        default: true
+      }
+    ]);
+
+    if (!downloadConfig) {
+      console.log(chalk.gray('Skipping configuration download. You can set this up later with:'));
+      console.log(chalk.gray('  launchpad admin config download\n'));
+      return;
+    }
+
+    // Ask which provider to use
+    const { provider } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'provider',
+        message: 'Which configuration source would you like to use?',
+        choices: [
+          { name: 'GitHub Gist (simple file sharing) - Recommended', value: 'gist' },
+          { name: 'GitHub Repository (version controlled)', value: 'github' },
+          { name: 'Local file (backup/export file)', value: 'local' },
+          { name: 'Skip for now', value: 'skip' }
+        ]
+      }
+    ]);
+
+    if (provider === 'skip') {
+      console.log(chalk.gray('Skipping configuration download. You can set this up later.\n'));
+      return;
+    }
+
+    let configOptions: ConfigDownloadOptions = { provider };
+
+    // Collect provider-specific information
+    if (provider === 'gist') {
+      const gistAnswers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'gistId',
+          message: 'GitHub Gist ID (e.g., abc123def456 or full URL):',
+          validate: (input: string) => input.length > 0 || 'Please enter a Gist ID'
+        },
+        {
+          type: 'input',
+          name: 'token',
+          message: 'GitHub Personal Access Token (for private gists):',
+          when: () => {
+            console.log(chalk.gray('💡 Create a token at: https://github.com/settings/tokens'));
+            console.log(chalk.gray('   Required scope: gist (for private gists)'));
+            return true;
+          }
+        },
+        {
+          type: 'input',
+          name: 'fileName',
+          message: 'File name in gist:',
+          default: 'launchpad-config.json'
+        }
+      ]);
+
+      configOptions = { ...configOptions, ...gistAnswers };
+    } else if (provider === 'github') {
+      const githubAnswers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'repository',
+          message: 'GitHub repository (org/repo):',
+          validate: (input: string) => {
+            const repoRegex = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+            return repoRegex.test(input) || 'Please enter a valid repository (org/repo)';
+          }
+        },
+        {
+          type: 'input',
+          name: 'token',
+          message: 'GitHub Personal Access Token:',
+          when: () => {
+            console.log(chalk.gray('💡 Create a token at: https://github.com/settings/tokens'));
+            console.log(chalk.gray('   Required scope: repo (for private repos)'));
+            return true;
+          }
+        },
+        {
+          type: 'input',
+          name: 'branch',
+          message: 'Branch name:',
+          default: 'main'
+        },
+        {
+          type: 'input',
+          name: 'path',
+          message: 'File path in repository:',
+          default: 'launchpad-config.json'
+        }
+      ]);
+
+      configOptions = { ...configOptions, ...githubAnswers };
+    } else if (provider === 'local') {
+      const localAnswers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'localPath',
+          message: 'Path to configuration file:',
+          validate: (input: string) => input.length > 0 || 'Please enter a file path'
+        }
+      ]);
+
+      configOptions = { ...configOptions, ...localAnswers };
+    }
+
+    try {
+      // Import and run admin config download command
+      const { SyncHandler } = await import('@/commands/admin/config/sync-handler');
+      const syncHandler = new SyncHandler();
+
+      await syncHandler.downloadConfig(configOptions);
+
+      // Note: The sync handler handles its own success/error messaging
+    } catch (error) {
+      console.log(chalk.yellow('⚠️  Could not download configuration.'));
+      console.log(chalk.gray('You can try again later with: launchpad admin config download'));
+      console.log(chalk.gray('Continuing with local setup...\n'));
+    }
   }
 
   private async checkEssentialTools(): Promise<boolean> {
