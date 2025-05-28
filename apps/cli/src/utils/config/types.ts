@@ -50,6 +50,21 @@ export type Team = {
 
 export type Platform = 'macos' | 'linux' | 'windows';
 
+// Type definitions for custom check configurations
+export type CheckConfig =
+  | { type: 'env'; variable?: string; variables?: string[]; value?: string }
+  | { type: 'file-contains'; file: string; pattern?: string; patterns?: string[] }
+  | { type: 'path-includes'; command: string; includes: string | string[] }
+  | { type: 'combined'; checks: CheckConfig[]; operator?: 'AND' | 'OR' }
+  | { type: 'command'; command: string };
+
+// Type definitions for custom installation configurations
+export type CustomInstallConfig =
+  | { type: 'script'; script: string }
+  | { type: 'commands'; commands: string[] }
+  | { type: 'manual'; steps: string[]; links?: string[] }
+  | { type: 'download'; url: string; message?: string };
+
 export type SetupComponent = {
   id: string;
   name: string;
@@ -67,7 +82,7 @@ export type SetupComponent = {
     [platform in Platform]?: {
       type: 'command' | 'file' | 'custom';
       value: string;
-      customCheck?: string; // For complex detection logic
+      customCheck?: CheckConfig | string; // For complex detection logic or JSON string
     };
   };
   installation: {
@@ -78,7 +93,7 @@ export type SetupComponent = {
       packages?: string[];
       script?: string;
       manualSteps?: string[];
-      customInstaller?: string; // Reference to custom installer function
+      customInstaller?: CustomInstallConfig | string; // Reference to custom installer function or JSON string
     };
   };
   postInstall?: {
@@ -104,7 +119,7 @@ export type InstallationConfig = {
   packages?: string[];
   script?: string;
   manualSteps?: string[];
-  customInstaller?: string;
+  customInstaller?: CustomInstallConfig | string;
 };
 
 export type PostInstallConfig = {

@@ -334,32 +334,81 @@ export class ProcessManager {
   async showStatus(): Promise<void> {
     const processes = Array.from(this.runningProcesses.values());
 
-    console.log(chalk.cyan('\n📊 Process Status'));
-    console.log(chalk.gray('─'.repeat(25)));
+    console.log(chalk.cyan('\n🚀 Application Status'));
+    console.log(chalk.gray('═'.repeat(35)));
 
     if (processes.length === 0) {
-      console.log(chalk.yellow('No running processes.'));
+      console.log(chalk.yellow('📭 No running processes'));
+      console.log('');
+      console.log(chalk.cyan('⚡ Quick Actions'));
+      console.log(chalk.gray('─'.repeat(15)));
+      console.log(`   ${chalk.white('launchpad app dev --all')}     - Start all repositories`);
+      console.log(`   ${chalk.white('launchpad app start -r <repo>')} - Start specific repository`);
+      console.log('');
       return;
     }
 
-    for (const proc of processes) {
-      const uptime = Date.now() - proc.startTime.getTime();
-      const status = proc.process.killed ? 'Stopped' : 'Running';
+    // Summary
+    const runningCount = processes.filter(p => !p.process.killed).length;
+    const stoppedCount = processes.length - runningCount;
+    const dockerCount = processes.filter(p => p.isDockerCompose).length;
 
-      console.log(chalk.white(`\n🔄 ${proc.repo} (${proc.command})`));
-      console.log(chalk.gray(`   PID: ${proc.pid}`));
-      console.log(chalk.gray(`   Status: ${status}`));
-      console.log(chalk.gray(`   Uptime: ${this.formatUptime(uptime)}`));
-      console.log(chalk.gray(`   Log: ${proc.logFile}`));
+    console.log(chalk.white(`📊 Summary: ${chalk.green(runningCount)} running, ${chalk.red(stoppedCount)} stopped`));
+    console.log(chalk.white(`🐳 Docker Compose: ${chalk.blue(dockerCount)} services`));
+    console.log('');
 
-      if (proc.isDockerCompose) {
-        console.log(chalk.gray(`   🐳 Docker Compose: ${proc.composeFile}`));
-      }
+    // Group by status
+    const runningProcesses = processes.filter(p => !p.process.killed);
+    const stoppedProcesses = processes.filter(p => p.process.killed);
 
-      if (proc.dockerServices && proc.dockerServices.length > 0) {
-        console.log(chalk.gray(`   Services: ${proc.dockerServices.join(', ')}`));
+    // Show running processes
+    if (runningProcesses.length > 0) {
+      console.log(chalk.cyan('🟢 Running Processes'));
+      console.log(chalk.gray('─'.repeat(20)));
+
+      for (const proc of runningProcesses) {
+        const uptime = Date.now() - proc.startTime.getTime();
+        const typeIcon = proc.isDockerCompose ? '🐳' : '⚡';
+
+        console.log(`   ${typeIcon} ${chalk.white(proc.repo)} ${chalk.gray(`(${proc.command})`)}`);
+        console.log(`      ${chalk.gray('PID:')} ${chalk.yellow(proc.pid)}`);
+        console.log(`      ${chalk.gray('Uptime:')} ${chalk.green(this.formatUptime(uptime))}`);
+
+        if (proc.isDockerCompose) {
+          console.log(`      ${chalk.gray('Compose:')} ${chalk.blue(proc.composeFile)}`);
+          if (proc.dockerServices && proc.dockerServices.length > 0) {
+            console.log(`      ${chalk.gray('Services:')} ${chalk.cyan(proc.dockerServices.join(', '))}`);
+          }
+        }
+
+        console.log(`      ${chalk.gray('Logs:')} ${chalk.gray(proc.logFile)}`);
+        console.log('');
       }
     }
+
+    // Show stopped processes
+    if (stoppedProcesses.length > 0) {
+      console.log(chalk.cyan('🔴 Stopped Processes'));
+      console.log(chalk.gray('─'.repeat(20)));
+
+      for (const proc of stoppedProcesses) {
+        const typeIcon = proc.isDockerCompose ? '🐳' : '⚡';
+
+        console.log(`   ${typeIcon} ${chalk.white(proc.repo)} ${chalk.gray(`(${proc.command})`)}`);
+        console.log(`      ${chalk.gray('Status:')} ${chalk.red('Stopped')}`);
+        console.log(`      ${chalk.gray('Last PID:')} ${chalk.yellow(proc.pid)}`);
+        console.log(`      ${chalk.gray('Logs:')} ${chalk.gray(proc.logFile)}`);
+        console.log('');
+      }
+    }
+
+    // Quick actions
+    console.log(chalk.cyan('⚡ Quick Actions'));
+    console.log(chalk.gray('─'.repeat(15)));
+    console.log(`   ${chalk.white('launchpad app stop --all')}     - Stop all processes`);
+    console.log(`   ${chalk.white('launchpad app logs -r <repo>')} - View logs`);
+    console.log(`   ${chalk.white('launchpad app kill')}           - Force kill all`);
+    console.log('');
   }
 
   private formatUptime(ms: number): string {

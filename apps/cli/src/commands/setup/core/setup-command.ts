@@ -260,24 +260,131 @@ export class SetupCommand {
   }
 
   async checkSetupStatus(): Promise<void> {
-    console.log(chalk.cyan('\n📊 Development Environment Status'));
-    console.log(chalk.gray('─'.repeat(40)));
+    console.log(chalk.cyan('\n🔧 Development Environment Status'));
+    console.log(chalk.gray('═'.repeat(45)));
 
     const dataManager = DataManager.getInstance();
     const platform = this.detectPlatform();
     const allComponents = await dataManager.getSetupComponents();
     const availableComponents = allComponents.filter((comp) => comp.platforms.includes(platform));
 
+    // Platform info
+    console.log(chalk.white(`💻 Platform: ${chalk.yellow(platform)}`));
+    console.log('');
+
     const categories = this.groupByCategory(availableComponents);
+    let totalInstalled = 0;
+    let totalUnits = 0; // Units can be individual components or choice groups
 
     for (const [category, components] of Object.entries(categories)) {
-      console.log(chalk.yellow(`\n${this.getCategoryTitle(category)}:`));
-      for (const component of components) {
-        const isInstalled = await this.detector.checkComponentInstalled(component, platform);
-        const status = isInstalled ? chalk.green('✅ Installed') : chalk.red('❌ Not installed');
-        console.log(`  ${status} ${component.name}`);
+      console.log(chalk.cyan(`${this.getCategoryIcon(category)} ${this.getCategoryTitle(category)}`));
+      console.log(chalk.gray('─'.repeat(25)));
+
+      // Group components by choice groups and individual components
+      const choiceGroups = this.getChoiceGroups(components);
+      const individualComponents = components.filter(comp => !comp.choiceGroup);
+
+      let categoryInstalled = 0;
+      let categoryUnits = 0;
+
+      // Handle choice groups
+      for (const [groupId, group] of Object.entries(choiceGroups)) {
+        categoryUnits++;
+        totalUnits++;
+
+        // Check which components in this group are installed
+        const installedInGroup = [];
+        const notInstalledInGroup = [];
+
+        for (const component of group.components) {
+          const isInstalled = await this.detector.checkComponentInstalled(component, platform);
+          if (isInstalled) {
+            installedInGroup.push(component);
+          } else {
+            notInstalledInGroup.push(component);
+          }
+        }
+
+        // Determine group status
+        const hasAnyInstalled = installedInGroup.length > 0;
+        const groupIcon = hasAnyInstalled ? chalk.green('✅') : chalk.yellow('⚠️');
+        const groupStatus = hasAnyInstalled
+          ? chalk.green('Satisfied')
+          : chalk.yellow('Choose one');
+
+        // Show group header
+        console.log(`   ${groupIcon} ${chalk.white(group.name)} - ${groupStatus}`);
+        console.log(`      ${chalk.gray(group.description)}`);
+
+        // Show individual options in the group (indented)
+        for (const component of group.components) {
+          const isInstalled = await this.detector.checkComponentInstalled(component, platform);
+          const optionIcon = isInstalled ? chalk.green('●') : chalk.gray('○');
+          const optionStatus = isInstalled ? chalk.green('Installed') : chalk.gray('Available');
+
+          console.log(`      ${optionIcon} ${chalk.gray(component.name)} - ${optionStatus}`);
+        }
+
+        if (hasAnyInstalled) {
+          categoryInstalled++;
+          totalInstalled++;
+        }
+
+        console.log(''); // Add spacing after each group
       }
+
+      // Handle individual components (not in choice groups)
+      for (const component of individualComponents) {
+        categoryUnits++;
+        totalUnits++;
+
+        const isInstalled = await this.detector.checkComponentInstalled(component, platform);
+        const statusIcon = isInstalled ? chalk.green('✅') : chalk.red('❌');
+        const statusText = isInstalled ? chalk.green('Installed') : chalk.red('Not installed');
+
+        console.log(`   ${statusIcon} ${chalk.white(component.name)} - ${statusText}`);
+        console.log(`      ${chalk.gray(component.description)}`);
+
+        if (isInstalled) {
+          categoryInstalled++;
+          totalInstalled++;
+        }
+      }
+
+      // Category summary
+      if (categoryUnits > 0) {
+        const categoryPercent = Math.round((categoryInstalled / categoryUnits) * 100);
+        const categoryStatus = categoryInstalled === categoryUnits
+          ? chalk.green(`✅ Complete (${categoryInstalled}/${categoryUnits})`)
+          : chalk.yellow(`⚠️  ${categoryPercent}% (${categoryInstalled}/${categoryUnits})`);
+
+        console.log(`   ${chalk.gray('└─')} ${categoryStatus}`);
+      }
+      console.log('');
     }
+
+    // Overall summary
+    console.log(chalk.cyan('📊 Overall Status'));
+    console.log(chalk.gray('─'.repeat(20)));
+
+    const overallPercent = totalUnits > 0 ? Math.round((totalInstalled / totalUnits) * 100) : 0;
+    const overallStatus = totalInstalled === totalUnits
+      ? chalk.green(`🎉 All requirements satisfied! (${totalInstalled}/${totalUnits})`)
+      : chalk.yellow(`⚠️  ${overallPercent}% complete (${totalInstalled}/${totalUnits})`);
+
+    console.log(`   ${overallStatus}`);
+    console.log(chalk.white(`📦 Total Requirements: ${chalk.yellow(totalUnits)} (including choice groups)`));
+
+    if (totalInstalled < totalUnits) {
+      console.log('');
+      console.log(chalk.cyan('⚡ Quick Actions'));
+      console.log(chalk.gray('─'.repeat(15)));
+      console.log(`   ${chalk.white('launchpad setup essential')}  - Install essential tools`);
+      console.log(`   ${chalk.white('launchpad setup all')}        - Interactive setup of all tools`);
+      console.log(`   ${chalk.white('launchpad setup <tool>')}     - Install specific tool`);
+    }
+
+    console.log('');
   }
 
   private async handleChoiceGroup(group: ChoiceGroup, platform: Platform): Promise<void> {
@@ -374,5 +481,13 @@ export class SetupCommand {
       .with('development', () => 'Development Tools')
       .with('optional', () => 'Optional Tools')
       .otherwise(() => `${category.charAt(0).toUpperCase()}${category.slice(1)} Tools`);
+  }
+
+  private getCategoryIcon(category: string): string {
+    return match(category)
+      .with('essential', () => '🔧')
+      .with('development', () => '💻')
+      .with('optional', () => '🔍')
+      .otherwise(() => '📦');
   }
 }

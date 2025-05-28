@@ -4,16 +4,9 @@ import chalk from 'chalk';
 import parseJson from 'parse-json';
 import { match } from 'ts-pattern';
 
-import type { SetupComponent, InstallationConfig, PostInstallConfig } from '@/utils/config/types';
+import type { SetupComponent, InstallationConfig, PostInstallConfig, CustomInstallConfig } from '@/utils/config/types';
 
 type Platform = 'macos' | 'linux' | 'windows';
-
-// Type definitions for dynamic installation configurations
-type CustomInstallConfig =
-  | { type: 'script'; script: string }
-  | { type: 'commands'; commands: string[] }
-  | { type: 'manual'; steps: string[]; links?: string[] }
-  | { type: 'download'; url: string; message?: string };
 
 export class ComponentInstaller {
   installComponent(component: SetupComponent, platform: Platform): Promise<void> {
@@ -158,13 +151,21 @@ export class ComponentInstaller {
   }
 
   private parseCustomConfig(installation: InstallationConfig): CustomInstallConfig {
+    // If it's already an object, return it
+    if (typeof installation.customInstaller === 'object' && installation.customInstaller !== null) {
+      return installation.customInstaller;
+    }
+
     // If customInstaller is a JSON string, parse it
-    if (installation.customInstaller?.trim()) {
-      try {
-        return parseJson(installation.customInstaller) as CustomInstallConfig;
-      } catch {
-        // If not JSON, treat as a script
-        return { type: 'script', script: installation.customInstaller };
+    if (typeof installation.customInstaller === 'string') {
+      const strValue = installation.customInstaller;
+      if (strValue.trim()) {
+        try {
+          return parseJson(strValue) as CustomInstallConfig;
+        } catch {
+          // If not JSON, treat as a script
+          return { type: 'script', script: strValue };
+        }
       }
     }
 

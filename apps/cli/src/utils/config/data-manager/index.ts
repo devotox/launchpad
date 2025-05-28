@@ -140,39 +140,44 @@ export class DataManager {
   }
 
   // Bundle operations
-  async createConfigBundle(): Promise<ConfigBundle> {
+  async createConfigBundle(preserveTokens = false): Promise<ConfigBundle> {
     const teams = await this.getTeams();
     const setupComponents = await this.getSetupComponents();
     const globalDocs = await this.getGlobalOnboardingDocs();
 
-    // Get sanitized sync config
-    let sanitizedSyncConfig: ConfigBundle['syncConfig'];
+    // Get sync config with optional token preservation
+    let syncConfigToInclude: ConfigBundle['syncConfig'];
     try {
       const { ConfigManager } = await import('@/utils/config/manager');
       const configManager = ConfigManager.getInstance();
       const syncConfig = await configManager.getSyncConfig();
 
       if (syncConfig) {
-        // Create a sanitized version with empty tokens
-        sanitizedSyncConfig = {
-          ...syncConfig,
-          providers: Object.fromEntries(
-            Object.entries(syncConfig.providers).map(([key, provider]) => {
-              if (!provider) return [key, provider];
+        if (preserveTokens) {
+          // Keep tokens as-is for local backups
+          syncConfigToInclude = syncConfig;
+        } else {
+          // Create a sanitized version with empty tokens for cloud uploads
+          syncConfigToInclude = {
+            ...syncConfig,
+            providers: Object.fromEntries(
+              Object.entries(syncConfig.providers).map(([key, provider]) => {
+                if (!provider) return [key, provider];
 
-              // Sanitize sensitive fields by setting them to empty strings
-              const sanitized = { ...provider } as Record<string, unknown>;
-              if ('token' in sanitized) {
-                (sanitized as { token: string }).token = '';
-              }
-              if ('credentials' in sanitized) {
-                (sanitized as { credentials: string }).credentials = '';
-              }
+                // Sanitize sensitive fields by setting them to empty strings
+                const sanitized = { ...provider } as Record<string, unknown>;
+                if ('token' in sanitized) {
+                  (sanitized as { token: string }).token = '';
+                }
+                if ('credentials' in sanitized) {
+                  (sanitized as { credentials: string }).credentials = '';
+                }
 
-              return [key, sanitized];
-            })
-          )
-        };
+                return [key, sanitized];
+              })
+            )
+          };
+        }
       }
     } catch {
       // Sync config is optional, don't fail bundle creation
@@ -184,7 +189,7 @@ export class DataManager {
       teams,
       setupComponents,
       globalDocs,
-      syncConfig: sanitizedSyncConfig,
+      syncConfig: syncConfigToInclude,
       metadata: {
         source: 'launchpad-cli',
         description: 'Configuration bundle created by Launchpad CLI'

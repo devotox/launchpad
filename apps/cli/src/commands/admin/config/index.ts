@@ -63,6 +63,7 @@ export class ConfigCommand {
         'all'
       )
       .option('--output <path>', 'Output file path')
+      .option('--preserve-tokens', 'Keep sensitive tokens in backup (use with caution)')
       .action(async (options) => {
         await this.backupHandler.backupConfig(options);
       });

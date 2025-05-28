@@ -64,41 +64,113 @@ export class TeamCommand {
       return;
     }
 
-    console.log(chalk.cyan(`\n👥 ${team.name} Team Information`));
-    console.log(chalk.gray('─'.repeat(50)));
-    console.log(chalk.white(`Description: ${team.description}`));
-    console.log(chalk.white(`Team Lead: ${team.lead}`));
-    console.log(chalk.white(`Tools: ${team.tools.join(', ')}`));
+    // Header
+    console.log(chalk.cyan(`\n👥 ${team.name} Team`));
+    console.log(chalk.gray('═'.repeat(50)));
 
-    console.log(chalk.cyan('\n📂 Repositories:'));
+    // Basic Info
+    console.log(chalk.white(`📝 ${team.description}`));
+    console.log(chalk.white(`👤 Team Lead: ${chalk.yellow(team.lead)}`));
+    console.log('');
+
+    // Slack Channels
+    console.log(chalk.cyan('💬 Slack Channels'));
+    console.log(chalk.gray('─'.repeat(20)));
+    if (team.slackChannels.main) {
+      console.log(`   ${chalk.green('●')} Main: ${chalk.white(team.slackChannels.main)}`);
+    }
+    if (team.slackChannels.dev) {
+      console.log(`   ${chalk.blue('●')} Dev: ${chalk.white(team.slackChannels.dev)}`);
+    }
+    if (team.slackChannels.alerts) {
+      console.log(`   ${chalk.red('●')} Alerts: ${chalk.white(team.slackChannels.alerts)}`);
+    }
+    if (team.slackChannels.support) {
+      console.log(`   ${chalk.yellow('●')} Support: ${chalk.white(team.slackChannels.support)}`);
+    }
+    if (team.slackChannels.updates) {
+      console.log(`   ${chalk.magenta('●')} Updates: ${chalk.white(team.slackChannels.updates)}`);
+    }
+    console.log('');
+
+    // Repositories
+    console.log(chalk.cyan('📂 Repositories'));
+    console.log(chalk.gray('─'.repeat(15)));
     for (const repo of team.repositories) {
-      const requiredBadge = repo.required ? chalk.red('[REQUIRED]') : chalk.gray('[OPTIONAL]');
-      const typeBadge = chalk.blue(`[${repo.type.toUpperCase()}]`);
-      console.log(
-        `  ${requiredBadge} ${typeBadge} ${chalk.white(repo.name)} - ${chalk.gray(repo.description)}`
-      );
+      const requiredIcon = repo.required ? chalk.red('🔴') : chalk.gray('⚪');
+      const typeColor = repo.type === 'backend' ? chalk.blue : repo.type === 'frontend' ? chalk.green : chalk.gray;
+      console.log(`   ${requiredIcon} ${typeColor(repo.name)} - ${chalk.gray(repo.description)}`);
     }
+    console.log('');
 
-    console.log(chalk.cyan('\n📚 Onboarding Resources:'));
+    // Tools & Tech Stack
+    console.log(chalk.cyan('🛠️  Tech Stack'));
+    console.log(chalk.gray('─'.repeat(15)));
+    const toolsPerRow = 4;
+    for (let i = 0; i < team.tools.length; i += toolsPerRow) {
+      const toolsRow = team.tools.slice(i, i + toolsPerRow);
+      console.log(`   ${toolsRow.map(tool => chalk.white(`• ${tool}`)).join('  ')}`);
+    }
+    console.log('');
+
+    // Team-Specific Documentation
     const teamSpecificDocs = await dataManager.getTeamSpecificDocs(config.user.team);
-    const allDocs = await dataManager.getAllOnboardingDocs(config.user.team);
-    const globalDocs = await dataManager.getGlobalOnboardingDocs();
-
     if (teamSpecificDocs.length > 0) {
-      console.log(chalk.yellow('Team-Specific Documentation:'));
+      console.log(chalk.cyan('📚 Team Documentation'));
+      console.log(chalk.gray('─'.repeat(25)));
       for (const doc of teamSpecificDocs) {
-        console.log(chalk.green(`  🎯 ${doc}`));
-      }
-
-      console.log(chalk.yellow('\nGeneral LoveHolidays Documentation:'));
-      for (const doc of globalDocs) {
-        console.log(chalk.gray(`  • ${doc}`));
-      }
-    } else {
-      for (const doc of allDocs) {
-        console.log(chalk.gray(`  • ${doc}`));
+        const [title, url] = doc.split(': ');
+        console.log(`   ${chalk.green('📖')} ${chalk.white(title)}`);
+        console.log(`      ${chalk.gray(url)}`);
+        console.log('');
       }
     }
+
+    // Global Documentation (condensed)
+    const globalDocs = await dataManager.getGlobalOnboardingDocs();
+    if (globalDocs.length > 0) {
+      console.log(chalk.cyan('🌐 General Resources'));
+      console.log(chalk.gray('─'.repeat(20)));
+
+      // Group docs by category
+      const categories = {
+        'Setup & Access': globalDocs.filter(doc =>
+          doc.includes('GitHub') || doc.includes('NPM') || doc.includes('VPN') || doc.includes('Kubernetes')
+        ),
+        'Development': globalDocs.filter(doc =>
+          doc.includes('DevPortal') || doc.includes('Digital Product')
+        ),
+        'Monitoring': globalDocs.filter(doc =>
+          doc.includes('Grafana') || doc.includes('Looker')
+        ),
+        'Support': globalDocs.filter(doc =>
+          doc.includes('Freshservice')
+        )
+      };
+
+      for (const [category, docs] of Object.entries(categories)) {
+        if (docs.length > 0) {
+          console.log(`   ${chalk.yellow(category)}:`);
+          docs.slice(0, 3).forEach(doc => {
+            const [title] = doc.split(': ');
+            console.log(`     ${chalk.gray('•')} ${chalk.white(title)}`);
+          });
+          if (docs.length > 3) {
+            console.log(`     ${chalk.gray(`... and ${docs.length - 3} more`)}`);
+          }
+          console.log('');
+        }
+      }
+    }
+
+    // Quick Actions
+    console.log(chalk.cyan('⚡ Quick Actions'));
+    console.log(chalk.gray('─'.repeat(15)));
+    console.log(`   ${chalk.white('launchpad team slack')}    - View all Slack channels`);
+    console.log(`   ${chalk.white('launchpad team config')}   - View team configuration`);
+    console.log(`   ${chalk.white('launchpad team qr')}       - Quick reference guide`);
+    console.log(`   ${chalk.white('launchpad app dev --all')} - Start all repositories`);
+    console.log('');
   }
 
   async showSlackChannels(): Promise<void> {

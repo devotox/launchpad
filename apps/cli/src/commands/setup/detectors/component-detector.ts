@@ -5,15 +5,7 @@ import parseJson from 'parse-json';
 import { stringify } from 'safe-stable-stringify';
 import { match } from 'ts-pattern';
 
-import type { Platform, SetupComponent } from '@/utils/config/types';
-
-// Type definitions for dynamic check configurations
-type CheckConfig =
-  | { type: 'env'; variable?: string; variables?: string[]; value?: string }
-  | { type: 'file-contains'; file: string; pattern?: string; patterns?: string[] }
-  | { type: 'path-includes'; command: string; includes: string | string[] }
-  | { type: 'combined'; checks: CheckConfig[]; operator?: 'AND' | 'OR' }
-  | { type: 'command'; command: string };
+import type { Platform, SetupComponent, CheckConfig } from '@/utils/config/types';
 
 export class ComponentDetector {
   checkComponentInstalled(component: SetupComponent, platform: Platform): Promise<boolean> {
@@ -58,7 +50,7 @@ export class ComponentDetector {
     return existsSync(expandedPath);
   }
 
-  private executeCustomCheck(checkLogic: string): boolean {
+  private executeCustomCheck(checkLogic: string | CheckConfig): boolean {
     try {
       // Parse the custom check as a JSON object with check configuration
       const checkConfig = this.parseCheckConfig(checkLogic);
@@ -69,16 +61,21 @@ export class ComponentDetector {
         .with('path-includes', () => this.checkPathIncludes(checkConfig as Extract<CheckConfig, { type: 'path-includes' }>))
         .with('combined', () => this.checkCombined(checkConfig as Extract<CheckConfig, { type: 'combined' }>))
         .with('command', () => this.checkCommand((checkConfig as Extract<CheckConfig, { type: 'command' }>).command))
-        .otherwise(() => this.checkCommand(checkLogic));
+        .otherwise(() => this.checkCommand(typeof checkLogic === 'string' ? checkLogic : ''));
     } catch {
       // If parsing fails, treat as a simple command
-      return this.checkCommand(checkLogic);
+      return this.checkCommand(typeof checkLogic === 'string' ? checkLogic : '');
     }
   }
 
-  private parseCheckConfig(checkLogic: string): CheckConfig {
+  private parseCheckConfig(checkLogic: string | CheckConfig): CheckConfig {
+    // If it's already an object, return it
+    if (typeof checkLogic === 'object' && checkLogic !== null) {
+      return checkLogic;
+    }
+
     try {
-      // Try to parse as JSON
+      // Try to parse as JSON string
       return parseJson(checkLogic) as CheckConfig;
     } catch {
       // If not JSON, return a simple command config
@@ -167,7 +164,30 @@ export class ComponentDetector {
       return false;
     }
 
-    const results = checks.map(check => this.executeCustomCheck(stringify(check)));
+    const results = checks.map(check => {
+      // Handle each check type directly
+      if (check.type === 'file') {
+        return this.checkFile(check.value);
+      }
+      if (check.type === 'command') {
+        return this.checkCommand(check.command);
+      }
+      if (check.type === 'env') {
+        return this.checkEnvironmentVariable(check as Extract<CheckConfig, { type: 'env' }>);
+      }
+      if (check.type === 'file-contains') {
+        return this.checkFileContains(check as Extract<CheckConfig, { type: 'file-contains' }>);
+      }
+      if (check.type === 'path-includes') {
+        return this.checkPathIncludes(check as Extract<CheckConfig, { type: 'path-includes' }>);
+      }
+      if (check.type === 'combined') {
+        return this.checkCombined(check as Extract<CheckConfig, { type: 'combined' }>);
+      }
+
+      // Fallback to executeCustomCheck for other types
+      return this.executeCustomCheck(check);
+    });
 
     return match(operator.toUpperCase())
       .with('AND', () => results.every(result => result))
@@ -175,3 +195,4 @@ export class ComponentDetector {
       .otherwise(() => false);
   }
 }
+

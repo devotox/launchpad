@@ -15,28 +15,44 @@ export class InfoCommand {
     const configManager = ConfigManager.getInstance();
     const dataManager = DataManager.getInstance();
 
-    console.log(chalk.cyan('\n📁 Configuration Information'));
-    console.log(chalk.gray('─'.repeat(35)));
+    console.log(chalk.cyan('\n⚙️  Configuration Information'));
+    console.log(chalk.gray('═'.repeat(40)));
 
-    console.log(chalk.white('\nConfiguration Files:'));
-    console.log(chalk.gray(`   Teams: ${dataManager.getTeamsFilePath()}`));
-    console.log(chalk.gray(`   Setup Components: ${dataManager.getSetupComponentsFilePath()}`));
-    console.log(chalk.gray(`   Global Docs: ${dataManager.getGlobalDocsFilePath()}`));
-    console.log(chalk.gray(`   Main Config: ${configManager.getConfigPath()}`));
-    console.log(chalk.gray(`   Sync Config: ${configManager.getSyncConfigPath()}`));
+    // Configuration Files Section
+    console.log(chalk.cyan('📁 Configuration Files'));
+    console.log(chalk.gray('─'.repeat(25)));
+    console.log(`   ${chalk.white('Teams:')} ${chalk.gray(dataManager.getTeamsFilePath())}`);
+    console.log(`   ${chalk.white('Setup Components:')} ${chalk.gray(dataManager.getSetupComponentsFilePath())}`);
+    console.log(`   ${chalk.white('Global Docs:')} ${chalk.gray(dataManager.getGlobalDocsFilePath())}`);
+    console.log(`   ${chalk.white('Main Config:')} ${chalk.gray(configManager.getConfigPath())}`);
+    console.log(`   ${chalk.white('Sync Config:')} ${chalk.gray(configManager.getSyncConfigPath())}`);
+    console.log('');
 
-    console.log(chalk.white('\nDirectories:'));
-    console.log(chalk.gray(`   Config Directory: ${configManager.getConfigDir()}`));
-    console.log(chalk.gray(`   Logs Directory: ${configManager.getLogsDir()}`));
-    console.log(chalk.gray(`   Cache Directory: ${configManager.getCacheDir()}`));
+    // Directories Section
+    console.log(chalk.cyan('📂 Directories'));
+    console.log(chalk.gray('─'.repeat(15)));
+    console.log(`   ${chalk.white('Config:')} ${chalk.gray(configManager.getConfigDir())}`);
+    console.log(`   ${chalk.white('Logs:')} ${chalk.gray(configManager.getLogsDir())}`);
+    console.log(`   ${chalk.white('Cache:')} ${chalk.gray(configManager.getCacheDir())}`);
+    console.log('');
 
-    // Check file existence
-    console.log(chalk.white('\nFile Status:'));
+    // File Status Section
+    console.log(chalk.cyan('📊 File Status'));
+    console.log(chalk.gray('─'.repeat(15)));
     await this.checkFileExists('Teams', dataManager.getTeamsFilePath());
     await this.checkFileExists('Setup Components', dataManager.getSetupComponentsFilePath());
     await this.checkFileExists('Global Docs', dataManager.getGlobalDocsFilePath());
     await this.checkFileExists('Main Config', configManager.getConfigPath());
     await this.checkFileExists('Sync Config', configManager.getSyncConfigPath());
+
+    console.log('');
+    console.log(chalk.cyan('⚡ Quick Actions'));
+    console.log(chalk.gray('─'.repeat(15)));
+    console.log(`   ${chalk.white('launchpad admin teams:list')}    - View all teams`);
+    console.log(`   ${chalk.white('launchpad admin teams:add')}     - Add new team`);
+    console.log(`   ${chalk.white('launchpad admin docs:add')}      - Add documentation`);
+    console.log(`   ${chalk.white('launchpad admin config backup')} - Backup configuration`);
+    console.log('');
   }
 
   private async checkFileExists(name: string, path: string): Promise<void> {

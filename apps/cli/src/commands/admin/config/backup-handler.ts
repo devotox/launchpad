@@ -9,16 +9,16 @@ import type { BackupConfigType, BackupFileInfo } from '@/utils/config/types';
 export class BackupHandler {
   private dataManager = DataManager.getInstance();
 
-  async backupConfig(options: { type: string; output?: string }): Promise<void> {
+  async backupConfig(options: { type: string; output?: string; preserveTokens?: boolean }): Promise<void> {
     console.log(chalk.cyan('\n💾 Creating Configuration Backup'));
     console.log(chalk.gray('─'.repeat(35)));
 
     try {
-      const { type, output } = options;
+      const { type, output, preserveTokens } = options;
       let backupPath: string;
 
       if (type === 'all') {
-        backupPath = await this.createCompleteBackup(output);
+        backupPath = await this.createCompleteBackup(output, preserveTokens);
       } else {
         backupPath = await this.createPartialBackup(type, output);
       }
@@ -30,7 +30,7 @@ export class BackupHandler {
     }
   }
 
-  private async createCompleteBackup(outputPath?: string): Promise<string> {
+  private async createCompleteBackup(outputPath?: string, preserveTokens?: boolean): Promise<string> {
     const { promises: fs } = await import('node:fs');
     const { join } = await import('node:path');
 
@@ -52,40 +52,55 @@ export class BackupHandler {
     }
 
     // Also create a complete bundle file for convenience
-    const bundle = await this.dataManager.createConfigBundle();
+    const shouldPreserveTokens = preserveTokens === true || (!outputPath || !outputPath.includes('gist') && !outputPath.includes('github') && !outputPath.includes('drive'));
+    const bundle = await this.dataManager.createConfigBundle(shouldPreserveTokens);
     const bundlePath = join(timestampedDir, 'complete-bundle.json');
     await fs.writeFile(bundlePath, stringify(bundle, null, 2));
 
-    // Add sync config backup (without sensitive tokens)
+    // Add sync config backup (preserve tokens for local backups or when explicitly requested)
     try {
       const { ConfigManager } = await import('@/utils/config/manager');
       const configManager = ConfigManager.getInstance();
       const syncConfig = await configManager.getSyncConfig();
 
       if (syncConfig) {
-        // Create a sanitized version with empty tokens
-        const sanitizedSyncConfig = {
-          ...syncConfig,
-          providers: Object.fromEntries(
-            Object.entries(syncConfig.providers).map(([key, provider]) => {
-              if (!provider) return [key, provider];
+        // Determine if we should preserve tokens
+        // Always preserve for local backups, or when explicitly requested
+        const shouldPreserveTokens = preserveTokens === true || !outputPath?.includes('gist') && !outputPath?.includes('github') && !outputPath?.includes('drive');
 
-              // Sanitize sensitive fields by setting them to empty strings
-              const sanitized = { ...provider } as Record<string, unknown>;
-              if ('token' in sanitized) {
-                (sanitized as { token: string }).token = '';
-              }
-              if ('credentials' in sanitized) {
-                (sanitized as { credentials: string }).credentials = '';
-              }
+        let configToSave = syncConfig;
 
-              return [key, sanitized];
-            })
-          )
-        };
+        if (!shouldPreserveTokens) {
+          // Create a sanitized version with empty tokens for cloud backups
+          configToSave = {
+            ...syncConfig,
+            providers: Object.fromEntries(
+              Object.entries(syncConfig.providers).map(([key, provider]) => {
+                if (!provider) return [key, provider];
+
+                // Sanitize sensitive fields by setting them to empty strings
+                const sanitized = { ...provider } as Record<string, unknown>;
+                if ('token' in sanitized) {
+                  (sanitized as { token: string }).token = '';
+                }
+                if ('credentials' in sanitized) {
+                  (sanitized as { credentials: string }).credentials = '';
+                }
+
+                return [key, sanitized];
+              })
+            )
+          };
+        }
 
         const syncConfigPath = join(timestampedDir, 'sync-config.json');
-        await fs.writeFile(syncConfigPath, stringify(sanitizedSyncConfig, null, 2));
+        await fs.writeFile(syncConfigPath, stringify(configToSave, null, 2));
+
+        if (shouldPreserveTokens) {
+          console.log(chalk.cyan('🔑 Tokens preserved in local backup'));
+        } else {
+          console.log(chalk.gray('🔒 Tokens sanitized for cloud backup'));
+        }
       }
     } catch (error) {
       // Sync config backup is optional, don't fail the entire backup

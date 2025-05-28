@@ -214,31 +214,57 @@ export class TeamsCommand {
     const teams = await dataManager.getTeams();
 
     console.log(chalk.cyan('\n👥 All Teams'));
-    console.log(chalk.gray('─'.repeat(20)));
+    console.log(chalk.gray('═'.repeat(25)));
 
     if (teams.length === 0) {
-      console.log(chalk.yellow('No teams found.'));
+      console.log(chalk.yellow('📭 No teams found'));
+      console.log('');
+      console.log(chalk.cyan('⚡ Quick Actions'));
+      console.log(chalk.gray('─'.repeat(15)));
+      console.log(`   ${chalk.white('launchpad admin teams:add')} - Add new team`);
+      console.log('');
       return;
     }
+
+    console.log(chalk.white(`📊 Total Teams: ${chalk.yellow(teams.length)}`));
+    console.log('');
 
     for (const team of teams) {
       this.displayTeamInfo(team);
     }
+
+    console.log(chalk.cyan('⚡ Quick Actions'));
+    console.log(chalk.gray('─'.repeat(15)));
+    console.log(`   ${chalk.white('launchpad admin teams:add')}    - Add new team`);
+    console.log(`   ${chalk.white('launchpad admin teams:edit')}   - Edit existing team`);
+    console.log(`   ${chalk.white('launchpad admin teams:remove')} - Remove team`);
+    console.log('');
   }
 
   private displayTeamInfo(team: Team): void {
-    console.log(chalk.white(`\n📋 ${team.name} (${team.id})`));
-    console.log(chalk.gray(`   Description: ${team.description}`));
-    console.log(chalk.gray(`   Lead: ${team.lead}`));
-    console.log(chalk.gray(`   Repositories: ${team.repositories.length}`));
-    console.log(
-      chalk.gray(
-        `   Tools: ${team.tools.slice(0, 3).join(', ')}${team.tools.length > 3 ? '...' : ''}`
-      )
-    );
-    if (team.slackChannels.main) {
-      console.log(chalk.gray(`   Main Slack: ${team.slackChannels.main}`));
+    console.log(chalk.cyan(`📋 ${team.name}`));
+    console.log(chalk.gray('─'.repeat(15)));
+    console.log(`   ${chalk.white('ID:')} ${chalk.yellow(team.id)}`);
+    console.log(`   ${chalk.white('Description:')} ${chalk.gray(team.description)}`);
+    console.log(`   ${chalk.white('Lead:')} ${chalk.green(team.lead)}`);
+    console.log(`   ${chalk.white('Repositories:')} ${chalk.blue(team.repositories.length)}`);
+
+    if (team.tools.length > 0) {
+      const toolsDisplay = team.tools.length > 3
+        ? `${team.tools.slice(0, 3).join(', ')} ${chalk.gray(`(+${team.tools.length - 3} more)`)}`
+        : team.tools.join(', ');
+      console.log(`   ${chalk.white('Tools:')} ${chalk.cyan(toolsDisplay)}`);
     }
+
+    if (team.slackChannels.main) {
+      console.log(`   ${chalk.white('Main Slack:')} ${chalk.magenta(team.slackChannels.main)}`);
+    }
+
+    if (team.config.workspacePrefix) {
+      console.log(`   ${chalk.white('Workspace:')} ${chalk.gray(team.config.workspacePrefix)}`);
+    }
+
+    console.log('');
   }
 
   private async selectAndEditTeam(): Promise<void> {
