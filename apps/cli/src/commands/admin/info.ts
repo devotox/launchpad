@@ -1,7 +1,8 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 
-import { ConfigManager, DataManager } from '@/utils/config';
+import { DataManager } from '@/utils/config/data-manager/index';
+import { ConfigManager } from '@/utils/config/manager';
 
 export class InfoCommand {
   getCommand(): Command {

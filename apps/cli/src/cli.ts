@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import { AdminCommand } from '@/commands/admin';
 import { AppCommand } from '@/commands/app';
 import { InitCommand } from '@/commands/init';
-import { SetupCommand } from '@/commands/setup';
+import { SetupCommand } from '@/commands/setup/core/setup-command';
 import { TeamCommand } from '@/commands/team';
 
 export class LaunchpadCLI {
@@ -26,7 +26,7 @@ export class LaunchpadCLI {
         `
 ${chalk.cyan('Examples:')}
   ${chalk.gray('$')} launchpad init
-  ${chalk.gray('$')} launchpad setup all --essential-only
+  ${chalk.gray('$')} launchpad setup essential
   ${chalk.gray('$')} launchpad setup status
   ${chalk.gray('$')} launchpad setup kubernetes
   ${chalk.gray('$')} launchpad setup github
@@ -47,7 +47,7 @@ ${chalk.cyan('Examples:')}
 
 ${chalk.cyan('Quick Start:')}
   ${chalk.gray('1.')} launchpad init                    ${chalk.gray('# Initialize your workspace')}
-  ${chalk.gray('2.')} launchpad setup all --essential-only  ${chalk.gray('# Set up essential tools')}
+  ${chalk.gray('2.')} launchpad setup essential         ${chalk.gray('# Set up essential tools')}
   ${chalk.gray('3.')} launchpad team qr                 ${chalk.gray('# Quick team reference')}
   ${chalk.gray('4.')} launchpad app dev --all           ${chalk.gray('# Start all repos in dev mode')}
 

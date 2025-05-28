@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { match } from 'ts-pattern';
 
-import { DataManager } from '@/utils/config';
+import { DataManager } from '@/utils/config/data-manager/index';
 
 export class DocsCommand {
   getCommand(): Command {

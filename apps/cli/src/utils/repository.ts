@@ -6,7 +6,7 @@ import { execa } from 'execa';
 import inquirer from 'inquirer';
 import { match } from 'ts-pattern';
 
-import type { Repository } from '@/utils/config';
+import type { Repository } from '@/utils/config/types';
 
 export class RepositoryManager {
   constructor(private workspacePath: string) {}

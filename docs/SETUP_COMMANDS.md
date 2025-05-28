@@ -12,7 +12,7 @@ The setup system is designed to handle all the tools and services mentioned in t
 
 ```bash
 launchpad setup all                    # Interactive setup of all tools
-launchpad setup all --essential-only   # Only essential tools
+launchpad setup essential              # Only essential tools (choice-based)
 launchpad setup status                 # Check installation status
 ```
 
@@ -64,7 +64,7 @@ launchpad setup terminal       # Interactive choice of terminal
 launchpad setup loveholidays   # All LoveHolidays-specific tools
 ```
 
-**Note**: The setup system currently uses **mock implementations**. Setup components are stored in `~/.config/launchpad/setup-components.json` and start empty. Use `launchpad admin components:list` to view available components after they're added via the admin interface.
+**Note**: The setup system now includes **real implementations** for most components. Setup components are stored in `~/.config/launchpad/setup-components.json`. The essential setup uses choice-based logic to handle alternatives like Node.js version managers intelligently.
 
 ## Component Categories
 
@@ -138,7 +138,7 @@ The setup system automatically detects your platform and installs appropriate to
 
 ## Current Implementation Status
 
-The setup system is currently in **mock/development mode**:
+The setup system now includes **real implementations** for most components:
 
 ### What Works
 - ✅ All command parsing and routing
@@ -147,13 +147,24 @@ The setup system is currently in **mock/development mode**:
 - ✅ Interactive prompts and user experience
 - ✅ JSON-based component storage system
 - ✅ Grouped commands (kubernetes, github, api-client, terminal, loveholidays)
+- ✅ **Real installation implementations** for most components
+- ✅ **Choice-based essential setup** with smart handling of alternatives
+- ✅ **Proper detection logic** for installed components
 
-### Mock Implementations
-Currently, all setup commands are **mock implementations** that:
-- Simulate installation time with realistic delays (1 second)
-- Show appropriate installation commands for each tool
-- Display next steps and configuration guidance
-- Always report components as "not installed" (`checkComponentInstalled` returns `false`)
+### Real Implementations
+Most setup commands now have **real implementations** that:
+- Actually install the tools using platform-appropriate package managers
+- Detect existing installations correctly
+- Handle Node.js version managers intelligently (Volta, NVM, ASDF)
+- Provide real installation commands and post-install guidance
+- Support cross-platform installation where possible
+
+### Choice-Based Essential Setup
+The `launchpad setup essential` command uses intelligent choice-based logic:
+- Groups mutually exclusive tools (like Node.js version managers)
+- Skips choices when something is already installed
+- Only prompts for what's actually needed
+- Provides clear feedback about existing installations
 
 ### LoveHolidays Grouped Setup
 The `launchpad setup loveholidays` command installs these components:
@@ -162,14 +173,15 @@ The `launchpad setup loveholidays` command installs these components:
 - `google-workspace` - Google Workspace access verification
 - `kubernetes-access` - Kubernetes cluster access setup
 
-### Ready for Real Implementation
+### Production Ready
 
-The architecture is designed to easily replace mock implementations with real ones:
-- `checkComponentInstalled()` - Currently returns `false` for all components
-- `mockInstallComponent()` - Simulates installation with delays and success messages
+The architecture now includes real implementations:
+- `checkComponentInstalled()` - Real detection logic for most components
+- `installComponent()` - Real installation commands using platform package managers
 - Component data is stored in JSON files and loaded dynamically
 - Platform detection works correctly (`macos`, `linux`, `windows`)
 - Type-safe interfaces ensure component structure consistency
+- Choice-based logic handles alternatives intelligently
 
 ### Component IDs Used in Code
 
@@ -191,7 +203,7 @@ launchpad init
 launchpad setup status
 
 # 3. Set up essential tools
-launchpad setup all --essential-only
+launchpad setup essential
 
 # 4. Add development tools as needed
 launchpad setup docker

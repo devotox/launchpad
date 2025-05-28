@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
-
-import { ConfigManager, DataManager } from '@/utils/config';
+import { ConfigManager } from '@/utils/config/manager';
+import { DataManager } from '@/utils/config/data-manager';
 import { RepositoryManager } from '@/utils/repository';
 
 type InitAnswers = {
@@ -68,9 +68,9 @@ export class InitCommand {
         );
 
         // Import and run setup command
-        const { SetupCommand } = await import('./setup');
+        const { SetupCommand } = await import('@/commands/setup/core/setup-command');
         const setupCommand = new SetupCommand();
-        await setupCommand.runFullSetup(true); // true = essentialOnly
+        await setupCommand.runEssentialChoiceSetup();
 
         console.log(chalk.green('\n✅ Essential tools setup completed!'));
         console.log(chalk.gray('Continuing with workspace initialization...\n'));
@@ -79,7 +79,7 @@ export class InitCommand {
           chalk.yellow('\n⚠️  Continuing without setup. Some features may not work properly.')
         );
         console.log(
-          chalk.gray('You can run setup later with: launchpad setup all --essential-only\n')
+          chalk.gray('You can run setup later with: launchpad setup essential\n')
         );
       }
     }

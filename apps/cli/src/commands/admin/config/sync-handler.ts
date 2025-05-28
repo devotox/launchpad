@@ -1,10 +1,11 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-
-import { ConfigManager } from '@/utils/config';
-import { DataManager } from '@/utils/config/data-manager';
+import parseJson from 'parse-json';
+import { stringify } from 'safe-stable-stringify';
 
 import type { ConfigBundle, SyncConfig } from '@/utils/config/types';
+import { DataManager } from '@/utils/config/data-manager/index';
+import { ConfigManager } from '@/utils/config/manager';
 
 export class SyncHandler {
   private dataManager = DataManager.getInstance();
@@ -114,7 +115,7 @@ export class SyncHandler {
 
         const fs = await import('node:fs/promises');
         const content = await fs.readFile(configToUse.localPath, 'utf-8');
-        bundle = JSON.parse(content) as ConfigBundle;
+        bundle = parseJson(content) as ConfigBundle;
       } else {
         console.log(chalk.red(`❌ Unsupported provider: ${providerToUse}`));
         return;
@@ -337,7 +338,7 @@ export class SyncHandler {
         const fileName = `launchpad-config-${timestamp}.json`;
         const fullPath = require('node:path').join(configToUse.localPath, fileName);
 
-        await fs.writeFile(fullPath, JSON.stringify(bundle, null, 2));
+        await fs.writeFile(fullPath, stringify(bundle, null, 2));
         console.log(chalk.green(`✅ Configuration saved to: ${fullPath}`));
       } else {
         console.log(chalk.red(`❌ Unsupported provider: ${providerToUse}`));

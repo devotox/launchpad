@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
+import parseJson from 'parse-json';
 import { match } from 'ts-pattern';
 
 import type { DockerComposeInfo, NpmDockerInfo } from './types';
@@ -35,7 +36,7 @@ export class DockerDetector {
     try {
       const packageJsonPath = join(repoPath, 'package.json');
       const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageJsonContent) as { scripts?: Record<string, string> };
+      const packageJson = parseJson(packageJsonContent) as { scripts?: Record<string, string> };
 
       if (!packageJson.scripts) {
         return { usesDocker: false };

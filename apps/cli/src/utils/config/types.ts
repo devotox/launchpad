@@ -1,4 +1,121 @@
-import type { Team, SetupComponent } from '@/utils/config/data';
+// Comprehensive type definitions for the Launchpad CLI configuration system
+// All actual data is stored in JSON files in ~/.config/launchpad/
+
+// ============================================================================
+// Core Data Types (formerly from data.ts)
+// ============================================================================
+
+export type Repository = {
+  name: string;
+  url: string;
+  description: string;
+  required: boolean;
+  type: 'frontend' | 'backend' | 'mobile' | 'infrastructure' | 'shared';
+};
+
+export type SlackChannels = {
+  main: string;
+  standup?: string;
+  alerts?: string;
+  social?: string;
+  support?: string;
+};
+
+export type TeamConfig = {
+  defaultBranch: string;
+  codeReviewRequired: boolean;
+  deploymentEnvironments: string[];
+  testingStrategy: string[];
+  cicdPipeline: string;
+  monitoringTools: string[];
+  workspacePrefix?: string;
+  communicationPreferences: {
+    standupTime?: string;
+    timezone: string;
+    meetingDays: string[];
+  };
+};
+
+export type Team = {
+  id: string;
+  name: string;
+  description: string;
+  lead: string;
+  slackChannels: SlackChannels;
+  repositories: Repository[];
+  tools: string[];
+  teamSpecificDocs?: string[];
+  config: TeamConfig;
+};
+
+export type Platform = 'macos' | 'linux' | 'windows';
+
+export type SetupComponent = {
+  id: string;
+  name: string;
+  description: string;
+  category: 'essential' | 'development' | 'optional';
+  platforms: Platform[];
+  choiceGroup?: {
+    id: string;
+    name: string;
+    description: string;
+    required?: boolean;
+    mutuallyExclusive?: boolean;
+  };
+  detection: {
+    [platform in Platform]?: {
+      type: 'command' | 'file' | 'custom';
+      value: string;
+      customCheck?: string; // For complex detection logic
+    };
+  };
+  installation: {
+    [platform in Platform]?: {
+      type: 'package-manager' | 'script' | 'manual' | 'custom';
+      commands?: string[];
+      packageManager?: 'brew' | 'apt' | 'winget' | 'npm' | 'volta';
+      packages?: string[];
+      script?: string;
+      manualSteps?: string[];
+      customInstaller?: string; // Reference to custom installer function
+    };
+  };
+  postInstall?: {
+    message?: string;
+    steps?: string[];
+    links?: string[];
+  };
+};
+
+export type ChoiceGroup = {
+  id: string;
+  name: string;
+  description: string;
+  required: boolean;
+  mutuallyExclusive: boolean;
+  components: SetupComponent[];
+};
+
+export type InstallationConfig = {
+  type: 'package-manager' | 'script' | 'manual' | 'custom';
+  commands?: string[];
+  packageManager?: 'brew' | 'apt' | 'winget' | 'npm' | 'volta';
+  packages?: string[];
+  script?: string;
+  manualSteps?: string[];
+  customInstaller?: string;
+};
+
+export type PostInstallConfig = {
+  message?: string;
+  steps?: string[];
+  links?: string[];
+};
+
+// ============================================================================
+// Configuration Types
+// ============================================================================
 
 export type LaunchpadConfig = {
   user: {
@@ -99,7 +216,10 @@ export type ConfigBundle = {
   };
 };
 
+// ============================================================================
 // Backup and Restore Types
+// ============================================================================
+
 export type BackupConfigType = 'teams' | 'setup-components' | 'global-docs';
 
 export type BackupData<T = Team[] | SetupComponent[] | string[]> = {

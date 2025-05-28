@@ -31,6 +31,8 @@
     "execa": "9.5.3",
     "fs-extra": "11.3.0",
     "inquirer": "12.6.2",
+    "parse-json": "8.3.0",
+    "safe-stable-stringify": "2.5.0",
     "ts-pattern": "5.7.1",
     "zx": "8.5.4"
   },
@@ -42,7 +44,9 @@
     "tsx": "4.19.4",
     "vitest": "2.1.8"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },

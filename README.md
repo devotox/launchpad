@@ -83,7 +83,7 @@ pnpm install -g @loveholidays/launchpad-cli
 
 ```bash
 # Set up essential development tools (recommended first step)
-launchpad setup all --essential-only
+launchpad setup essential
 
 # Or set up everything at once
 launchpad setup all
@@ -279,7 +279,7 @@ Launchpad automates the installation of all development tools you need for LoveH
 launchpad setup all
 
 # Essential tools only (recommended for quick start)
-launchpad setup all --essential-only
+launchpad setup essential
 
 # Check what's installed
 launchpad setup status

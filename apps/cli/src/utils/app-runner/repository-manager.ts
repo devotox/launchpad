@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
 import chalk from 'chalk';
+import parseJson from 'parse-json';
 
 export class RepositoryManager {
   private workspacePath: string;
@@ -100,7 +101,7 @@ export class RepositoryManager {
       const packageJsonPath = join(repoPath, 'package.json');
       try {
         const packageContent = await fs.readFile(packageJsonPath, 'utf-8');
-        const packageJson = JSON.parse(packageContent) as {
+        const packageJson = parseJson(packageContent) as {
           description?: string;
           version?: string;
         };
@@ -186,7 +187,7 @@ export class RepositoryManager {
     try {
       const packageJsonPath = join(repoPath, 'package.json');
       const packageContent = await fs.readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageContent) as { scripts?: Record<string, string> };
+      const packageJson = parseJson(packageContent) as { scripts?: Record<string, string> };
 
       return packageJson.scripts ? Object.keys(packageJson.scripts) : [];
     } catch {

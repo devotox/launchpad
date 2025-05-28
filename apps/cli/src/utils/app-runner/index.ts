@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { ConfigManager } from '@/utils/config';
+import { ConfigManager } from '@/utils/config/manager';
 
 import { CommandResolver } from './command-resolver';
 import { DockerDetector } from './docker-detector';

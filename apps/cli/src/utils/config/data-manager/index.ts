@@ -6,8 +6,11 @@ import { match } from 'ts-pattern';
 
 import { CoreDataManager } from '@/utils/config/data-manager/core';
 
-import type { Team, SetupComponent } from '@/utils/config/data';
+import type { Team, SetupComponent } from '@/utils/config/types';
 import type { ConfigBundle, BackupFileInfo, SyncConfig } from '@/utils/config/types';
+
+import parseJson from 'parse-json';
+import { stringify } from 'safe-stable-stringify';
 
 export class DataManager {
   private static instance: DataManager;
@@ -294,7 +297,7 @@ export class DataManager {
       }
 
       const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      return JSON.parse(content) as ConfigBundle;
+      return parseJson(content) as ConfigBundle;
     } catch (error) {
       throw new Error(`Failed to download config from GitHub: ${error}`);
     }
@@ -338,7 +341,7 @@ export class DataManager {
         // File doesn't exist, that's okay
       }
 
-      const content = Buffer.from(JSON.stringify(bundle, null, 2)).toString('base64');
+      const content = Buffer.from(stringify(bundle, null, 2)).toString('base64');
 
       const body = {
         message,
@@ -353,7 +356,7 @@ export class DataManager {
           ...headers,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: stringify(body)
       });
 
       if (!response.ok) {
@@ -412,7 +415,7 @@ export class DataManager {
         );
       }
 
-      return JSON.parse(file.content) as ConfigBundle;
+      return parseJson(file.content) as ConfigBundle;
     } catch (error) {
       throw new Error(`Failed to download config from GitHub Gist: ${error}`);
     }
@@ -449,7 +452,7 @@ export class DataManager {
       'Content-Type': 'application/json'
     };
 
-    const content = JSON.stringify(bundle, null, 2);
+    const content = stringify(bundle, null, 2);
 
     try {
       if (gistId) {
@@ -467,7 +470,7 @@ export class DataManager {
         const response = await fetch(url, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify(body)
+          body: stringify(body)
         });
 
         if (!response.ok) {
@@ -502,7 +505,7 @@ export class DataManager {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: stringify(body)
       });
 
       if (!response.ok) {
@@ -604,7 +607,7 @@ export class DataManager {
       }
     };
 
-    await fs.writeFile(defaultPath, JSON.stringify(backupData, null, 2));
+    await fs.writeFile(defaultPath, stringify(backupData, null, 2));
     return defaultPath;
   }
 
@@ -640,7 +643,7 @@ export class DataManager {
 
     // Read and validate restore data
     const content = await fs.readFile(inputPath, 'utf-8');
-    const backupData = JSON.parse(content) as { configType: string; data: unknown };
+    const backupData = parseJson(content) as { configType: string; data: unknown };
 
     if (backupData.configType !== configType) {
       throw new Error(
@@ -687,7 +690,7 @@ export class DataManager {
 
         try {
           const content = await fs.readFile(filePath, 'utf-8');
-          const data = JSON.parse(content) as {
+          const data = parseJson(content) as {
             configType?: string;
             teams?: unknown;
             setupComponents?: unknown;

@@ -2,9 +2,8 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { match } from 'ts-pattern';
 
-import { ConfigManager } from '@/utils/config';
-
 import type { SyncConfig } from '@/utils/config/types';
+import { ConfigManager } from '@/utils/config/manager';
 
 export class ProviderHandler {
   private configManager = ConfigManager.getInstance();

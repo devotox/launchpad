@@ -1,7 +1,7 @@
 ---
-description: TypeScript pattern matching and utility library standards
-globs: ["**/*.ts", "**/*.tsx"]
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 
 # TypeScript Patterns & Utilities

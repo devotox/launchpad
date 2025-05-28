@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import { stringify } from 'safe-stable-stringify';
 
 import { DataManager } from '@/utils/config/data-manager';
 
@@ -53,11 +54,11 @@ export class BackupHandler {
     // Also create a complete bundle file for convenience
     const bundle = await this.dataManager.createConfigBundle();
     const bundlePath = join(timestampedDir, 'complete-bundle.json');
-    await fs.writeFile(bundlePath, JSON.stringify(bundle, null, 2));
+    await fs.writeFile(bundlePath, stringify(bundle, null, 2));
 
     // Add sync config backup (without sensitive tokens)
     try {
-      const { ConfigManager } = await import('@/utils/config');
+      const { ConfigManager } = await import('@/utils/config/manager');
       const configManager = ConfigManager.getInstance();
       const syncConfig = await configManager.getSyncConfig();
 
@@ -84,7 +85,7 @@ export class BackupHandler {
         };
 
         const syncConfigPath = join(timestampedDir, 'sync-config.json');
-        await fs.writeFile(syncConfigPath, JSON.stringify(sanitizedSyncConfig, null, 2));
+        await fs.writeFile(syncConfigPath, stringify(sanitizedSyncConfig, null, 2));
       }
     } catch (error) {
       // Sync config backup is optional, don't fail the entire backup

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 
-import { DataManager } from '@/utils/config';
+import { DataManager } from '@/utils/config/data-manager';
 
 export class ComponentsCommand {
   getCommand(): Command {
@@ -60,8 +60,8 @@ export class ComponentsCommand {
       console.log(chalk.gray(`   Category: ${component.category}`));
       console.log(chalk.gray(`   Platforms: ${component.platforms.join(', ')}`));
 
-      if (component.dependencies && component.dependencies.length > 0) {
-        console.log(chalk.gray(`   Dependencies: ${component.dependencies.join(', ')}`));
+      if (component.choiceGroup) {
+        console.log(chalk.gray(`   Choice Group: ${component.choiceGroup.name}`));
       }
     }
   }

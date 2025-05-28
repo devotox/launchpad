@@ -1,9 +1,12 @@
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
+import parseJson from 'parse-json';
+import { stringify } from 'safe-stable-stringify';
+
 import { getConfigDirectory } from '@/utils/config/paths';
 
-import type { Team, SetupComponent } from '@/utils/config/data';
+import type { Team, SetupComponent } from '@/utils/config/types';
 
 export class CoreDataManager {
   private static instance: CoreDataManager;
@@ -44,7 +47,7 @@ export class CoreDataManager {
     try {
       await fs.access(filePath);
     } catch {
-      await fs.writeFile(filePath, JSON.stringify(defaultContent, null, 2));
+      await fs.writeFile(filePath, stringify(defaultContent, null, 2));
     }
   }
 
@@ -56,7 +59,7 @@ export class CoreDataManager {
 
   async updateTeams(teams: Team[]): Promise<void> {
     await this.ensureDataFiles();
-    await fs.writeFile(this.teamsFile, JSON.stringify(teams, null, 2));
+    await fs.writeFile(this.teamsFile, stringify(teams, null, 2));
   }
 
   async getTeamById(id: string): Promise<Team | undefined> {
@@ -90,7 +93,7 @@ export class CoreDataManager {
 
   async updateSetupComponents(components: SetupComponent[]): Promise<void> {
     await this.ensureDataFiles();
-    await fs.writeFile(this.setupComponentsFile, JSON.stringify(components, null, 2));
+    await fs.writeFile(this.setupComponentsFile, stringify(components, null, 2));
   }
 
   async getSetupComponentById(id: string): Promise<SetupComponent | undefined> {
@@ -129,7 +132,7 @@ export class CoreDataManager {
 
   async updateGlobalOnboardingDocs(docs: string[]): Promise<void> {
     await this.ensureDataFiles();
-    await fs.writeFile(this.globalDocsFile, JSON.stringify(docs, null, 2));
+    await fs.writeFile(this.globalDocsFile, stringify(docs, null, 2));
   }
 
   // Team-specific helper methods
@@ -176,7 +179,7 @@ export class CoreDataManager {
   private async readJsonFile<T>(filePath: string, fileName: string): Promise<T> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
-      const parsed = JSON.parse(content);
+      const parsed = parseJson(content);
 
       // Type validation
       if (!Array.isArray(parsed)) {

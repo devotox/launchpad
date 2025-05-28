@@ -3,8 +3,7 @@ import { join } from 'node:path';
 
 import { DataManager } from '@/utils/config/data-manager';
 
-import type { Team } from '@/utils/config/data';
-import type { LaunchpadConfig } from '@/utils/config/types';
+import type { LaunchpadConfig, Team } from '@/utils/config/types';
 
 export async function createDefaultConfig(
   user: {

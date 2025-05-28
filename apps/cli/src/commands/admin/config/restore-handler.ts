@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import parseJson from 'parse-json';
 
 import { DataManager } from '@/utils/config/data-manager';
 
@@ -25,7 +26,7 @@ export class RestoreHandler {
       console.log(chalk.cyan(`📁 Restoring configuration from: ${options.input}`));
 
       const content = await fs.readFile(options.input, 'utf-8');
-      const backupData = JSON.parse(content) as ConfigBundle | BackupData;
+      const backupData = parseJson(content) as ConfigBundle | BackupData;
 
       // Auto-detect backup type if not specified
       let configType = options.type;
@@ -175,7 +176,7 @@ export class RestoreHandler {
     try {
       // Auto-detect config type from backup file
       const content = await fs.readFile(selectedBackup, 'utf-8');
-      const backupData = JSON.parse(content) as BackupData;
+      const backupData = parseJson(content) as BackupData;
       const { configType } = backupData;
 
       if (!configType) {

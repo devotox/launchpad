@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 
 import { AppRunner } from '@/utils/app-runner';
-import { ConfigManager } from '@/utils/config';
+import { ConfigManager } from '@/utils/config/manager';
 
 type AppCommandOptions = {
   repos?: string[];

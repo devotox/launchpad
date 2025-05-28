@@ -1,6 +1,9 @@
 import { promises as fs } from 'node:fs';
 
-import { DataManager } from '@/utils/config/data-manager';
+import parseJson from 'parse-json';
+import { stringify } from 'safe-stable-stringify';
+
+import { DataManager } from '@/utils/config/data-manager/index';
 import {
   createDefaultConfig,
   validateConfig,
@@ -9,8 +12,13 @@ import {
 } from '@/utils/config/defaults';
 import { getConfigPaths } from '@/utils/config/paths';
 
-import type { SlackChannels, TeamConfig } from '@/utils/config/data';
-import type { LaunchpadConfig, ConfigOptions, SyncConfig } from '@/utils/config/types';
+import type {
+  ConfigOptions,
+  LaunchpadConfig,
+  SlackChannels,
+  SyncConfig,
+  TeamConfig
+} from './types';
 
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -55,7 +63,7 @@ export class ConfigManager {
   async loadConfig(): Promise<LaunchpadConfig | null> {
     try {
       const configData = await fs.readFile(this.configPaths.configFile, 'utf-8');
-      const parsedConfig = JSON.parse(configData);
+      const parsedConfig = parseJson(configData);
 
       // Validate config structure
       if (!validateConfig(parsedConfig)) {
@@ -91,7 +99,7 @@ export class ConfigManager {
     }
 
     config.lastUpdated = new Date().toISOString();
-    await fs.writeFile(this.configPaths.configFile, JSON.stringify(config, null, 2));
+    await fs.writeFile(this.configPaths.configFile, stringify(config, null, 2));
     this.config = config;
   }
 
@@ -134,6 +142,7 @@ export class ConfigManager {
 
   async deleteConfig(): Promise<void> {
     try {
+      await fs.access(this.configPaths.configFile);
       await fs.unlink(this.configPaths.configFile);
       this.config = null;
     } catch {
@@ -238,7 +247,7 @@ export class ConfigManager {
   async getSyncConfig(): Promise<SyncConfig | null> {
     try {
       const syncData = await fs.readFile(this.configPaths.syncConfigFile, 'utf-8');
-      return JSON.parse(syncData) as SyncConfig;
+      return parseJson(syncData) as SyncConfig;
     } catch {
       return null;
     }
@@ -246,7 +255,7 @@ export class ConfigManager {
 
   async saveSyncConfig(syncConfig: SyncConfig): Promise<void> {
     await this.ensureConfigDir();
-    await fs.writeFile(this.configPaths.syncConfigFile, JSON.stringify(syncConfig, null, 2));
+    await fs.writeFile(this.configPaths.syncConfigFile, stringify(syncConfig, null, 2));
   }
 
   async updateSyncConfig(updates: Partial<SyncConfig>): Promise<void> {
@@ -315,6 +324,7 @@ export class ConfigManager {
 
   async deleteSyncConfig(): Promise<void> {
     try {
+      await fs.access(this.configPaths.syncConfigFile);
       await fs.unlink(this.configPaths.syncConfigFile);
     } catch {
       // File doesn't exist, that's fine
