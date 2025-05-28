@@ -86,7 +86,7 @@ export class AppRunner {
     const npmDockerInfo = await this.dockerDetector.detectNpmDockerUsage(repoPath, command);
 
     // Resolve the actual command to run
-    const actualCommand = await this.commandResolver.resolveCommand(command, options, dockerInfo);
+    const actualCommand = await this.commandResolver.resolveCommand(command, options, dockerInfo, repoPath);
 
     // Run the command through process manager
     await this.processManager.runSingleCommand({

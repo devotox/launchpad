@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { execa } from 'execa';
 import { match } from 'ts-pattern';
 import type { Repository } from '@/utils/config/types';
+import { PackageManagerDetector } from './package-manager';
 
 export class RepositoryManager {
   private hasOpenedAuthPage = false; // Track if we've already opened a browser window
@@ -38,14 +39,46 @@ export class RepositoryManager {
     }
   }
 
-  async cloneRepository(repo: Repository): Promise<{ success: boolean; authIssue?: 'saml' | 'login' | 'token' | null }> {
+  async cloneRepository(
+    repo: Repository,
+    options: { overwrite?: boolean; interactive?: boolean } = {}
+  ): Promise<{ success: boolean; authIssue?: 'saml' | 'login' | 'token' | null; skipped?: boolean }> {
     const repoPath = join(this.workspacePath, repo.name);
 
     try {
       // Check if repository already exists
       await fs.access(repoPath);
-      console.log(chalk.yellow(`⚠️  Repository ${repo.name} already exists, skipping...`));
-      return { success: true };
+
+      if (options.overwrite) {
+        console.log(chalk.yellow(`⚠️  Repository ${repo.name} already exists, removing...`));
+        await fs.rm(repoPath, { recursive: true, force: true });
+      } else if (options.interactive) {
+        console.log(chalk.yellow(`⚠️  Repository ${repo.name} already exists.`));
+
+        const readline = await import('node:readline');
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+
+        const answer = await new Promise<string>((resolve) => {
+          rl.question(chalk.cyan('Do you want to overwrite it? (y/N): '), (answer) => {
+            rl.close();
+            resolve(answer.toLowerCase());
+          });
+        });
+
+        if (answer === 'y' || answer === 'yes') {
+          console.log(chalk.blue(`🗑️  Removing existing ${repo.name}...`));
+          await fs.rm(repoPath, { recursive: true, force: true });
+        } else {
+          console.log(chalk.gray(`   Skipping ${repo.name}`));
+          return { success: true, skipped: true };
+        }
+      } else {
+        console.log(chalk.yellow(`⚠️  Repository ${repo.name} already exists, skipping...`));
+        return { success: true, skipped: true };
+      }
     } catch {
       // Repository doesn't exist, proceed with cloning
     }
@@ -218,7 +251,12 @@ export class RepositoryManager {
     return url;
   }
 
-  async cloneRepositories(repositories: Repository[], onlyRequired = false): Promise<string[]> {
+  async cloneRepositories(
+    repositories: Repository[],
+    onlyRequired = false,
+    organization?: string,
+    options: { overwrite?: boolean; interactive?: boolean } = {}
+  ): Promise<string[]> {
     await this.ensureWorkspaceExists();
 
     // Basic check that git is available
@@ -232,19 +270,33 @@ export class RepositoryManager {
 
     const reposToClone = onlyRequired ? repositories.filter((repo) => repo.required) : repositories;
     const clonedRepos: string[] = [];
+    const skippedRepos: string[] = [];
     const failedRepos: { name: string; authIssue: 'saml' | 'login' | 'token' | null }[] = [];
 
     console.log(chalk.cyan(`\n📂 Setting up repositories in ${this.workspacePath}\n`));
 
     // Clone repositories
     for (const repo of reposToClone) {
-      const { success, authIssue } = await this.cloneRepository(repo);
+      const { success, authIssue, skipped } = await this.cloneRepository(repo, options);
 
       if (success) {
-        clonedRepos.push(repo.name);
+        if (skipped) {
+          skippedRepos.push(repo.name);
+        } else {
+          clonedRepos.push(repo.name);
+        }
       } else {
         failedRepos.push({ name: repo.name, authIssue: authIssue || null });
       }
+    }
+
+    // Report results
+    if (clonedRepos.length > 0) {
+      console.log(chalk.green(`\n✅ Successfully cloned ${clonedRepos.length} repositories`));
+    }
+
+    if (skippedRepos.length > 0) {
+      console.log(chalk.yellow(`\n⏭️  Skipped ${skippedRepos.length} existing repositories`));
     }
 
     // Handle failures
@@ -297,7 +349,8 @@ export class RepositoryManager {
       }
     }
 
-    return clonedRepos;
+    // Return all repositories that are now available (cloned + skipped)
+    return [...clonedRepos, ...skippedRepos];
   }
 
   async setupRepository(repoName: string): Promise<void> {
@@ -313,16 +366,32 @@ export class RepositoryManager {
 
       console.log(chalk.blue(`📦 Installing dependencies for ${repoName}...`));
 
-      // Use pnpm if available, otherwise npm
+      // Detect the appropriate package manager based on lock files
+      const detector = new PackageManagerDetector();
+      const packageManagerInfo = await detector.getBestAvailablePackageManager(repoPath);
+
+      console.log(chalk.gray(`   Using ${packageManagerInfo.manager} (detected from: ${packageManagerInfo.lockFile})`));
+
       try {
-        await execa('pnpm', ['install'], { cwd: repoPath });
-        console.log(chalk.green(`✅ Dependencies installed for ${repoName} using pnpm`));
-      } catch {
-        try {
-          await execa('npm', ['install'], { cwd: repoPath });
-          console.log(chalk.green(`✅ Dependencies installed for ${repoName} using npm`));
-        } catch (error) {
-          console.error(chalk.red(`❌ Failed to install dependencies for ${repoName}:`), error);
+        const [command, ...args] = packageManagerInfo.installCommand;
+        if (!command) {
+          throw new Error('No install command available');
+        }
+
+        await execa(command, args, { cwd: repoPath });
+        console.log(chalk.green(`✅ Dependencies installed for ${repoName} using ${packageManagerInfo.manager}`));
+      } catch (error) {
+        console.error(chalk.red(`❌ Failed to install dependencies for ${repoName} using ${packageManagerInfo.manager}:`), error);
+
+        // If the detected package manager failed, try npm as a last resort
+        if (packageManagerInfo.manager !== 'npm') {
+          console.log(chalk.yellow('   Trying npm as fallback...'));
+          try {
+            await execa('npm', ['install'], { cwd: repoPath });
+            console.log(chalk.green(`✅ Dependencies installed for ${repoName} using npm (fallback)`));
+          } catch (npmError) {
+            console.error(chalk.red(`❌ Failed to install dependencies for ${repoName} with npm fallback:`), npmError);
+          }
         }
       }
     } catch {

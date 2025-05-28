@@ -1,12 +1,16 @@
 import { match } from 'ts-pattern';
 
 import type { RunOptions, DockerComposeInfo } from './types';
+import { PackageManagerDetector } from '@/utils/package-manager';
 
 export class CommandResolver {
+  private packageManagerDetector = new PackageManagerDetector();
+
   async resolveCommand(
     command: string,
     options: RunOptions,
-    dockerInfo: DockerComposeInfo
+    dockerInfo: DockerComposeInfo,
+    repoPath?: string
   ): Promise<string[]> {
     // Check if it's a shell command (starts with sh: or contains shell operators)
     if (command.startsWith('sh:') || this.isShellCommand(command)) {
@@ -15,11 +19,11 @@ export class CommandResolver {
 
     // If it's a Docker Compose project, use Docker Compose commands
     if (dockerInfo.isDockerCompose && dockerInfo.composeFile) {
-      return this.resolveDockerComposeCommand(command, options, dockerInfo.composeFile);
+      return this.resolveDockerComposeCommand(command, options, dockerInfo.composeFile, repoPath);
     }
 
-    // Otherwise, use regular npm commands
-    return this.resolveNpmCommand(command, options);
+    // Otherwise, use package manager commands
+    return this.resolvePackageManagerCommand(command, options, repoPath);
   }
 
   private isShellCommand(command: string): boolean {
@@ -48,12 +52,23 @@ export class CommandResolver {
     return ['sh', '-c', actualCommand];
   }
 
-  private resolveDockerComposeCommand(
+  private async resolveDockerComposeCommand(
     command: string,
     options: RunOptions & { volumes?: boolean },
-    composeFile: string
-  ): string[] {
+    composeFile: string,
+    repoPath?: string
+  ): Promise<string[]> {
     const baseCmd = ['compose', '-f', composeFile];
+
+    // For Docker Compose commands that need package manager detection
+    const getPackageManagerCommand = async (subCommand: string): Promise<string[]> => {
+      if (!repoPath) {
+        return ['npm', subCommand]; // fallback to npm
+      }
+
+      const packageManagerInfo = await this.packageManagerDetector.getBestAvailablePackageManager(repoPath);
+      return [packageManagerInfo.manager, subCommand];
+    };
 
     return match(command)
       .with('dev', () => [...baseCmd, 'up', '--build'])
@@ -64,8 +79,9 @@ export class CommandResolver {
           .otherwise(() => [...baseCmd, 'up'])
       )
       .with('build', () => [...baseCmd, 'build'])
-      .with('test', () => {
-        const cmd = [...baseCmd, 'run', '--rm', 'app', 'npm', 'test'];
+      .with('test', async () => {
+        const packageManagerCmd = await getPackageManagerCommand('test');
+        const cmd = [...baseCmd, 'run', '--rm', 'app', ...packageManagerCmd];
         if (options.watch) {
           cmd.push('--', '--watch');
         }
@@ -80,44 +96,66 @@ export class CommandResolver {
         return cmd;
       })
       .with('logs', () => [...baseCmd, 'logs', '-f'])
-      .otherwise(() => [...baseCmd, 'run', '--rm', 'app', 'npm', 'run', command]);
+      .otherwise(async () => {
+        const packageManagerCmd = await getPackageManagerCommand('run');
+        return [...baseCmd, 'run', '--rm', 'app', ...packageManagerCmd, command];
+      });
   }
 
-  private resolveNpmCommand(command: string, options: RunOptions): string[] {
+  private async resolvePackageManagerCommand(command: string, options: RunOptions, repoPath?: string): Promise<string[]> {
+    // Get the appropriate package manager
+    const packageManagerInfo = repoPath
+      ? await this.packageManagerDetector.getBestAvailablePackageManager(repoPath)
+      : { manager: 'npm' as const, lockFile: 'fallback', installCommand: ['npm', 'install'] };
+
+    const { manager } = packageManagerInfo;
+
     return match(command)
       .with('dev', () =>
         match(options.environment)
-          .with('dev', () => ['npm', 'run', 'dev'])
-          .otherwise(() => ['npm', 'run', 'dev'])
+          .with('dev', () => [manager, 'run', 'dev'])
+          .otherwise(() => [manager, 'run', 'dev'])
       )
       .with('start', () =>
         match(options.environment)
-          .with('dev', () => ['npm', 'run', 'dev'])
-          .with('prod', () => ['npm', 'start'])
-          .otherwise(() => ['npm', 'start'])
+          .with('dev', () => [manager, 'run', 'dev'])
+          .with('prod', () => this.getStartCommand(manager))
+          .otherwise(() => this.getStartCommand(manager))
       )
       .with('build', () =>
         match(options.environment)
-          .with('dev', () => ['npm', 'run', 'build:dev'])
-          .with('prod', () => ['npm', 'run', 'build'])
-          .otherwise(() => ['npm', 'run', 'build'])
+          .with('dev', () => [manager, 'run', 'build:dev'])
+          .with('prod', () => [manager, 'run', 'build'])
+          .otherwise(() => [manager, 'run', 'build'])
       )
       .with('test', () => {
-        const baseCmd = ['npm', 'test'];
+        const baseCmd = this.getTestCommand(manager);
         if (options.watch) {
           baseCmd.push('--', '--watch');
         }
         return baseCmd;
       })
       .with('lint', () => {
-        const baseCmd = ['npm', 'run', 'lint'];
+        const baseCmd = [manager, 'run', 'lint'];
         if (options.fix) {
           baseCmd.push('--', '--fix');
         }
         return baseCmd;
       })
-      .with('install', () => ['npm', 'install'])
-      .otherwise(() => ['npm', 'run', command]);
+      .with('install', () => packageManagerInfo.installCommand)
+      .otherwise(() => [manager, 'run', command]);
+  }
+
+  private getStartCommand(manager: string): string[] {
+    return match(manager)
+      .with('npm', () => ['npm', 'start'])
+      .otherwise(() => [manager, 'run', 'start']);
+  }
+
+  private getTestCommand(manager: string): string[] {
+    return match(manager)
+      .with('npm', () => ['npm', 'test'])
+      .otherwise(() => [manager, 'run', 'test']);
   }
 
   isLongRunningCommand(command: string): boolean {

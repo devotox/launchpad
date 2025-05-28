@@ -39,6 +39,7 @@ type InitCheckpoint = {
   configDownloadOptions?: ConfigDownloadOptions;
   needsSetup?: boolean;
   force?: boolean;
+  overwrite?: boolean;
 };
 
 export class InitCommand {
@@ -53,14 +54,15 @@ export class InitCommand {
     return new Command('init')
       .description('Initialize your developer workspace')
       .option('--force', 'Force re-initialization even if config exists')
+      .option('--overwrite', 'Overwrite existing repositories without prompting')
       .option('--resume', 'Resume from last checkpoint if available')
       .option('--clean', 'Remove any existing checkpoint and start fresh')
       .action(async (options) => {
-        await this.execute(options.force, options.resume, options.clean);
+        await this.execute(options.force, options.resume, options.clean, options.overwrite);
       });
   }
 
-  async execute(force = false, resume = false, clean = false): Promise<void> {
+  async execute(force = false, resume = false, clean = false, overwrite = false): Promise<void> {
     const configManager = ConfigManager.getInstance();
     const dataManager = DataManager.getInstance();
 
@@ -111,17 +113,18 @@ export class InitCommand {
     console.log(chalk.gray("Let's set up your developer workspace...\n"));
 
     // Start fresh initialization
-    await this.runFullInitialization(force);
+    await this.runFullInitialization(force, overwrite);
   }
 
-  private async runFullInitialization(force = false): Promise<void> {
+  private async runFullInitialization(force = false, overwrite = false): Promise<void> {
     try {
       // Step 1: Essential tools check
       await this.saveCheckpoint({
         version: '1.0.0',
         timestamp: new Date().toISOString(),
         step: 'essential-tools',
-        force
+        force,
+        overwrite
       });
 
       const needsSetup = await this.checkEssentialTools();
@@ -169,7 +172,8 @@ export class InitCommand {
         timestamp: new Date().toISOString(),
         step: 'config-download',
         needsSetup,
-        force
+        force,
+        overwrite
       });
 
       await this.downloadInitialConfig();
@@ -180,7 +184,8 @@ export class InitCommand {
         timestamp: new Date().toISOString(),
         step: 'user-input',
         needsSetup,
-        force
+        force,
+        overwrite
       });
 
       const answers = await this.collectUserInput();
@@ -192,7 +197,8 @@ export class InitCommand {
         step: 'config-creation',
         answers,
         needsSetup,
-        force
+        force,
+        overwrite
       });
 
       await this.createConfiguration(answers);
@@ -205,7 +211,8 @@ export class InitCommand {
           step: 'github-auth',
           answers,
           needsSetup,
-          force
+          force,
+          overwrite
         });
 
         await this.setupGitHubAuthentication();
@@ -219,10 +226,11 @@ export class InitCommand {
           step: 'repo-cloning',
           answers,
           needsSetup,
-          force
+          force,
+          overwrite
         });
 
-        await this.handleRepositoryCloning(answers);
+        await this.handleRepositoryCloning(answers, overwrite);
       }
 
       // Step 7: Completion
@@ -232,7 +240,8 @@ export class InitCommand {
         step: 'completed',
         answers,
         needsSetup,
-        force
+        force,
+        overwrite
       });
 
       await this.showCompletionMessage(answers);
@@ -258,7 +267,7 @@ export class InitCommand {
       switch (checkpoint.step) {
         case 'essential-tools':
           console.log(chalk.gray('Resuming from essential tools check...'));
-          await this.runFullInitialization(checkpoint.force);
+          await this.runFullInitialization(checkpoint.force, checkpoint.overwrite);
           break;
 
         case 'config-download': {
@@ -267,7 +276,7 @@ export class InitCommand {
           const answers1 = await this.collectUserInput();
           await this.createConfiguration(answers1);
           if (answers1.setupGitHub) await this.setupGitHubAuthentication();
-          if (answers1.cloneRepos) await this.handleRepositoryCloning(answers1);
+          if (answers1.cloneRepos) await this.handleRepositoryCloning(answers1, checkpoint.overwrite);
           await this.showCompletionMessage(answers1);
           break;
         }
@@ -277,7 +286,7 @@ export class InitCommand {
           const answers2 = await this.collectUserInput();
           await this.createConfiguration(answers2);
           if (answers2.setupGitHub) await this.setupGitHubAuthentication();
-          if (answers2.cloneRepos) await this.handleRepositoryCloning(answers2);
+          if (answers2.cloneRepos) await this.handleRepositoryCloning(answers2, checkpoint.overwrite);
           await this.showCompletionMessage(answers2);
           break;
         }
@@ -288,14 +297,14 @@ export class InitCommand {
             const answers3 = await this.collectUserInput();
             await this.createConfiguration(answers3);
             if (answers3.setupGitHub) await this.setupGitHubAuthentication();
-            if (answers3.cloneRepos) await this.handleRepositoryCloning(answers3);
+            if (answers3.cloneRepos) await this.handleRepositoryCloning(answers3, checkpoint.overwrite);
             await this.showCompletionMessage(answers3);
           } else {
             console.log(chalk.gray('Resuming from configuration creation...'));
             const answers = checkpoint.answers as InitAnswers;
             await this.createConfiguration(answers);
             if (answers.setupGitHub) await this.setupGitHubAuthentication();
-            if (answers.cloneRepos) await this.handleRepositoryCloning(answers);
+            if (answers.cloneRepos) await this.handleRepositoryCloning(answers, checkpoint.overwrite);
             await this.showCompletionMessage(answers);
           }
           break;
@@ -309,7 +318,7 @@ export class InitCommand {
           console.log(chalk.gray('Resuming from GitHub authentication...'));
           const answers4 = checkpoint.answers as InitAnswers;
           if (answers4.setupGitHub) await this.setupGitHubAuthentication();
-          if (answers4.cloneRepos) await this.handleRepositoryCloning(answers4);
+          if (answers4.cloneRepos) await this.handleRepositoryCloning(answers4, checkpoint.overwrite);
           await this.showCompletionMessage(answers4);
           break;
         }
@@ -321,7 +330,7 @@ export class InitCommand {
           }
           console.log(chalk.gray('Resuming from repository cloning...'));
           const answers5 = checkpoint.answers as InitAnswers;
-          if (answers5.cloneRepos) await this.handleRepositoryCloning(answers5);
+          if (answers5.cloneRepos) await this.handleRepositoryCloning(answers5, checkpoint.overwrite);
           await this.showCompletionMessage(answers5);
           break;
         }
@@ -335,7 +344,7 @@ export class InitCommand {
 
         default:
           console.log(chalk.yellow('⚠️  Unknown checkpoint step. Starting fresh...'));
-          await this.runFullInitialization(checkpoint.force);
+          await this.runFullInitialization(checkpoint.force, checkpoint.overwrite);
       }
 
       // Clear checkpoint on successful completion
@@ -548,7 +557,7 @@ export class InitCommand {
     }
   }
 
-  private async handleRepositoryCloning(answers: InitAnswers): Promise<void> {
+  private async handleRepositoryCloning(answers: InitAnswers, overwrite = false): Promise<void> {
     const configManager = ConfigManager.getInstance();
     const dataManager = DataManager.getInstance();
 
@@ -569,12 +578,19 @@ export class InitCommand {
     const repoManager = new RepositoryManager(answers.workspacePath);
     const onlyRequired = answers.cloneType === 'required';
 
+    // Determine cloning options
+    const cloneOptions = {
+      overwrite,
+      interactive: !overwrite // Only prompt if overwrite flag is not set
+    };
+
     try {
       // Always pass organization since it's now always collected
       const clonedRepos = await repoManager.cloneRepositories(
         team.repositories,
         onlyRequired,
-        answers.organization
+        answers.organization,
+        cloneOptions
       );
 
       // Update config with cloned repositories
