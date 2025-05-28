@@ -10,6 +10,7 @@ import { join } from 'node:path';
 type InitAnswers = {
   name: string;
   email: string;
+  organization?: string;
   team: string;
   workspaceName: string;
   workspacePath: string;
@@ -382,14 +383,33 @@ export class InitCommand {
           if (!name) return '';
           const nameParts = name.split(/\s+/);
           if (nameParts.length >= 2) {
-            return `${nameParts[0]}.${nameParts[nameParts.length - 1]}@loveholidays.com`;
+            return `${nameParts[0]}.${nameParts[nameParts.length - 1]}@company.com`;
           }
-          return `${name}@loveholidays.com`;
+          return `${name}@company.com`;
         },
         validate: (input: string) => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           return emailRegex.test(input) || 'Please enter a valid email address';
         }
+      },
+      {
+        type: 'input',
+        name: 'organization',
+        message: 'GitHub organization name (optional - helps with SSO detection):',
+        default: (answers: Partial<InitAnswers>) => {
+          // Try to extract from email domain
+          const emailParts = answers.email?.split('@') || [];
+          if (emailParts.length > 1) {
+            const domain = emailParts[1]?.split('.')[0];
+            // Only suggest if it looks like an org name (not generic domains)
+            if (domain && !['gmail', 'yahoo', 'hotmail', 'outlook', 'company'].includes(domain)) {
+              return domain;
+            }
+          }
+          return '';
+        },
+        filter: (input: string) => input.trim().toLowerCase(),
+        when: (answers) => answers.setupGitHub
       },
       {
         type: 'list',
@@ -576,25 +596,18 @@ export class InitCommand {
         console.log(chalk.green(`\n✅ Successfully set up ${clonedRepos.length} repositories!`));
       } else {
         console.log(chalk.yellow('\n⚠️  No repositories were cloned.'));
-        console.log(chalk.gray('This might be due to authentication issues.'));
-        console.log(chalk.cyan('\n🔧 Troubleshooting:'));
-        console.log(chalk.gray('1. Install GitHub CLI if not already installed:'));
-        console.log(chalk.gray('   • macOS: brew install gh (requires Homebrew)'));
-        console.log(chalk.gray('   • Linux: https://cli.github.com/'));
-        console.log(chalk.gray('   • Windows: winget install --id GitHub.cli'));
-        console.log(chalk.gray('2. Authenticate with GitHub: gh auth login'));
-        console.log(chalk.gray('3. Set up SAML SSO for LoveHolidays organization'));
-        console.log(chalk.gray('4. Test access with: gh repo list loveholidays'));
-        console.log(chalk.gray('5. Try cloning manually: git clone [repo-url]'));
-        console.log(chalk.gray('6. Re-run init with: launchpad init --force'));
+        console.log(chalk.red('🚫 Repository cloning was blocked due to SAML SSO authentication issues.'));
+        console.log(chalk.gray('\n💡 To fix this:'));
+        console.log(chalk.gray('1. Re-run: launchpad init --force'));
+        console.log(chalk.gray('2. Complete the SAML SSO authentication setup when prompted'));
+        console.log(chalk.gray('3. Create a pre-authorized token with the organization authorized'));
       }
     } catch (error) {
       console.log(chalk.red('\n❌ Repository cloning encountered issues.'));
       console.log(chalk.gray(`Error: ${error}`));
       console.log(chalk.cyan('\n🔧 Next Steps:'));
-      console.log(chalk.gray('1. Complete GitHub SSO setup if not done'));
-      console.log(chalk.gray('2. Test repository access manually'));
-      console.log(chalk.gray('3. Re-run initialization: launchpad init --force'));
+      console.log(chalk.gray('1. Re-run: launchpad init --force'));
+      console.log(chalk.gray('2. Complete the SAML SSO authentication setup'));
     }
   }
 
@@ -626,7 +639,9 @@ export class InitCommand {
     console.log(chalk.gray("  2. Join your team's Slack channels"));
     if (!answers.setupGitHub) {
       console.log(chalk.yellow('  3. 🔐 Set up GitHub authentication: gh auth login'));
-      console.log(chalk.yellow('  4. 🔒 Configure SAML SSO for LoveHolidays organization'));
+      if (answers.organization) {
+        console.log(chalk.yellow(`  4. 🔒 Configure SAML SSO for ${answers.organization} organization`));
+      }
       console.log(chalk.gray('  5. Set up your development environment: launchpad setup all'));
     } else {
       console.log(
@@ -654,7 +669,10 @@ export class InitCommand {
         : 7;
     console.log(chalk.gray(`  ${finalStep}. Attend your first team standup`));
 
-    console.log(chalk.green(`\nWelcome to LoveHolidays, ${answers.name}! 🎉`));
+    const organizationName = answers.organization ?
+      answers.organization.charAt(0).toUpperCase() + answers.organization.slice(1) :
+      'the team';
+    console.log(chalk.green(`\nWelcome to ${organizationName}, ${answers.name}! 🎉`));
     console.log(
       chalk.cyan("💡 Tip: Use 'launchpad team --help' to explore team-specific commands")
     );
@@ -807,7 +825,7 @@ export class InitCommand {
 
         // Check SSO status
         console.log(chalk.cyan('\n🔒 Checking SAML SSO Authentication...'));
-        console.log(chalk.gray('LoveHolidays uses SAML SSO for GitHub access.'));
+        console.log(chalk.gray('Some organizations use SAML SSO for GitHub access.'));
 
         const { ssoSetup } = await inquirer.prompt([
           {
@@ -870,17 +888,17 @@ export class InitCommand {
   }
 
   private async guideSSOSetup(): Promise<void> {
-    console.log(chalk.cyan('\n🔒 SAML SSO Setup Required'));
+    console.log(chalk.cyan('\n🔒 SAML SSO Setup'));
     console.log(chalk.gray('─'.repeat(30)));
 
-    console.log(chalk.yellow('⚠️  LoveHolidays uses SAML SSO for GitHub access.'));
-    console.log(chalk.gray('You need to authorize your authentication for SSO access.'));
+    console.log(chalk.yellow('⚠️  Some organizations use SAML SSO for GitHub access.'));
+    console.log(chalk.gray('You may need to authorize your authentication for SSO access.'));
 
     console.log(chalk.white('\n📋 SSO Setup Steps:'));
     console.log(chalk.gray('1. Go to: https://github.com/settings/tokens'));
     console.log(chalk.gray('2. Find your personal access token'));
     console.log(chalk.gray('3. Click "Configure SSO" next to the token'));
-    console.log(chalk.gray('4. Authorize the "loveholidays" organization'));
+    console.log(chalk.gray('4. Authorize the organization(s) you need access to'));
     console.log(chalk.gray('5. For SSH keys, visit: https://github.com/settings/keys'));
     console.log(chalk.gray('6. Click "Configure SSO" for each SSH key'));
 
@@ -923,8 +941,8 @@ export class InitCommand {
     }
 
     console.log(chalk.cyan('\n💡 After SSO setup, test repository access with:'));
-    console.log(chalk.gray('   gh repo list loveholidays'));
-    console.log(chalk.gray('   git clone https://github.com/loveholidays/[repo-name].git'));
+    console.log(chalk.gray('   gh repo list [organization-name]'));
+    console.log(chalk.gray('   gh repo clone [organization]/[repo-name]'));
   }
 
   private async downloadInitialConfig(): Promise<void> {

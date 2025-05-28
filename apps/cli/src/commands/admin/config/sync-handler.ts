@@ -133,7 +133,7 @@ export class SyncHandler {
           type: 'confirm',
           name: 'confirm',
           message: 'Do you want to proceed with the import?',
-          default: false
+          default: true
         }
       ]);
 
