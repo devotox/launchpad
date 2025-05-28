@@ -8,6 +8,11 @@ export class CommandResolver {
     options: RunOptions,
     dockerInfo: DockerComposeInfo
   ): Promise<string[]> {
+    // Check if it's a shell command (starts with sh: or contains shell operators)
+    if (command.startsWith('sh:') || this.isShellCommand(command)) {
+      return this.resolveShellCommand(command);
+    }
+
     // If it's a Docker Compose project, use Docker Compose commands
     if (dockerInfo.isDockerCompose && dockerInfo.composeFile) {
       return this.resolveDockerComposeCommand(command, options, dockerInfo.composeFile);
@@ -15,6 +20,32 @@ export class CommandResolver {
 
     // Otherwise, use regular npm commands
     return this.resolveNpmCommand(command, options);
+  }
+
+  private isShellCommand(command: string): boolean {
+    // Detect shell commands by common patterns
+    const shellPatterns = [
+      /\s*echo\s+/,
+      /\s*printenv/,
+      /\s*env\s*/,
+      /\s*cat\s+/,
+      /\s*ls\s*/,
+      /\s*pwd/,
+      /\|\s*grep/,
+      /&&/,
+      /\|\|/,
+      /;/,
+      />/,
+      /</
+    ];
+
+    return shellPatterns.some(pattern => pattern.test(command));
+  }
+
+  private resolveShellCommand(command: string): string[] {
+    // Remove sh: prefix if present
+    const actualCommand = command.startsWith('sh:') ? command.slice(3) : command;
+    return ['sh', '-c', actualCommand];
   }
 
   private resolveDockerComposeCommand(

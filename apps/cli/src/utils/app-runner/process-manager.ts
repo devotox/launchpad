@@ -87,7 +87,13 @@ export class ProcessManager {
       const childProcess = spawn(command, actualCommand.slice(1), {
         cwd: repoPath,
         stdio: ['pipe', 'pipe', 'pipe'],
-        shell: true
+        shell: true,
+        env: {
+          ...process.env,
+          NODE_ENV: options.environment,
+          ENVIRONMENT: options.environment,
+          ENV: options.environment
+        }
       });
 
       const runningProcess: RunningProcess = {

@@ -102,7 +102,12 @@ export class InitCommand {
       return;
     }
 
-    console.log(chalk.cyan('🚀 Welcome to LoveHolidays Launchpad!'));
+    console.log(chalk.cyan('🚀 Welcome to Launchpad!'));
+    console.log(
+      chalk.gray(
+        'Launchpad will help you set up your development environment and get you ready to contribute.'
+      )
+    );
     console.log(chalk.gray("Let's set up your developer workspace...\n"));
 
     // Start fresh initialization
@@ -376,16 +381,24 @@ export class InitCommand {
       },
       {
         type: 'input',
+        name: 'organization',
+        message: 'GitHub organization name:',
+        default: 'loveholidays',
+        filter: (input: string) => input.trim().toLowerCase()
+      },
+      {
+        type: 'input',
         name: 'email',
         message: "What's your email address?",
         default: (answers: Partial<InitAnswers>) => {
           const name = answers.name?.toLowerCase().trim();
+          const org = answers.organization || 'company';
           if (!name) return '';
           const nameParts = name.split(/\s+/);
           if (nameParts.length >= 2) {
-            return `${nameParts[0]}.${nameParts[nameParts.length - 1]}@company.com`;
+            return `${nameParts[0]}.${nameParts[nameParts.length - 1]}@${org}.com`;
           }
-          return `${name}@company.com`;
+          return `${name}@${org}.com`;
         },
         validate: (input: string) => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -393,23 +406,11 @@ export class InitCommand {
         }
       },
       {
-        type: 'input',
-        name: 'organization',
-        message: 'GitHub organization name (optional - helps with SSO detection):',
-        default: (answers: Partial<InitAnswers>) => {
-          // Try to extract from email domain
-          const emailParts = answers.email?.split('@') || [];
-          if (emailParts.length > 1) {
-            const domain = emailParts[1]?.split('.')[0];
-            // Only suggest if it looks like an org name (not generic domains)
-            if (domain && !['gmail', 'yahoo', 'hotmail', 'outlook', 'company'].includes(domain)) {
-              return domain;
-            }
-          }
-          return '';
-        },
-        filter: (input: string) => input.trim().toLowerCase(),
-        when: (answers) => answers.setupGitHub
+        type: 'confirm',
+        name: 'setupGitHub',
+        message: 'Would you like to verify GitHub authentication (required for repository access)?',
+        default: true,
+        when: () => true // Always ask this question
       },
       {
         type: 'list',
@@ -435,13 +436,6 @@ export class InitCommand {
         default: (answers: Partial<InitAnswers>) =>
           `${process.env['HOME']}/Documents/${answers.workspaceName || 'workspace'}`,
         validate: (input: string) => input.length > 0 || 'Please enter a workspace path'
-      },
-      {
-        type: 'confirm',
-        name: 'setupGitHub',
-        message: 'Would you like to verify GitHub authentication (required for repository access)?',
-        default: true,
-        when: () => true // Always ask this question
       },
       {
         type: 'confirm',
@@ -576,7 +570,12 @@ export class InitCommand {
     const onlyRequired = answers.cloneType === 'required';
 
     try {
-      const clonedRepos = await repoManager.cloneRepositories(team.repositories, onlyRequired);
+      // Always pass organization since it's now always collected
+      const clonedRepos = await repoManager.cloneRepositories(
+        team.repositories,
+        onlyRequired,
+        answers.organization
+      );
 
       // Update config with cloned repositories
       await configManager.updateConfig({
@@ -600,7 +599,11 @@ export class InitCommand {
         console.log(chalk.gray('\n💡 To fix this:'));
         console.log(chalk.gray('1. Re-run: launchpad init --force'));
         console.log(chalk.gray('2. Complete the SAML SSO authentication setup when prompted'));
-        console.log(chalk.gray('3. Create a pre-authorized token with the organization authorized'));
+        if (answers.organization) {
+          console.log(chalk.gray(`3. Create a pre-authorized token with ${answers.organization} organization authorized`));
+        } else {
+          console.log(chalk.gray('3. Create a pre-authorized token with the organization authorized'));
+        }
       }
     } catch (error) {
       console.log(chalk.red('\n❌ Repository cloning encountered issues.'));
@@ -639,9 +642,7 @@ export class InitCommand {
     console.log(chalk.gray("  2. Join your team's Slack channels"));
     if (!answers.setupGitHub) {
       console.log(chalk.yellow('  3. 🔐 Set up GitHub authentication: gh auth login'));
-      if (answers.organization) {
-        console.log(chalk.yellow(`  4. 🔒 Configure SAML SSO for ${answers.organization} organization`));
-      }
+      console.log(chalk.yellow(`  4. 🔒 Configure SAML SSO for ${answers.organization} organization`));
       console.log(chalk.gray('  5. Set up your development environment: launchpad setup all'));
     } else {
       console.log(
@@ -669,9 +670,9 @@ export class InitCommand {
         : 7;
     console.log(chalk.gray(`  ${finalStep}. Attend your first team standup`));
 
-    const organizationName = answers.organization ?
-      answers.organization.charAt(0).toUpperCase() + answers.organization.slice(1) :
-      'the team';
+    const organizationName = answers.organization
+      ? answers.organization.charAt(0).toUpperCase() + answers.organization.slice(1)
+      : 'Loveholidays';
     console.log(chalk.green(`\nWelcome to ${organizationName}, ${answers.name}! 🎉`));
     console.log(
       chalk.cyan("💡 Tip: Use 'launchpad team --help' to explore team-specific commands")

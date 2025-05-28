@@ -145,6 +145,7 @@ export type LaunchpadConfig = {
   };
   preferences: {
     defaultEditor?: string;
+    defaultEnvironment?: 'dev' | 'staging' | 'prod' | 'test';
     autoClone: boolean;
     setupDependencies: boolean;
     preferredEditor: string;

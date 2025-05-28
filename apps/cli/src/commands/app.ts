@@ -175,6 +175,9 @@ export class AppCommand {
       return;
     }
 
+    // Use default environment from config if not specified
+    const environment = options.env || config.preferences.defaultEnvironment || 'dev';
+
     const appRunner = new AppRunner(config.workspace.path);
 
     // Determine which repositories to run on
@@ -217,12 +220,12 @@ export class AppCommand {
     }
 
     console.log(chalk.cyan(`\n🚀 Running '${command}' on ${targetRepos.length} repositories...`));
-    console.log(chalk.gray(`Environment: ${options.env || 'dev'}`));
+    console.log(chalk.gray(`Environment: ${environment}`));
     console.log(chalk.gray(`Parallel: ${options.parallel ? 'Yes' : 'No'}`));
     console.log(chalk.gray(`Repositories: ${targetRepos.join(', ')}`));
 
     await appRunner.runCommand(command, targetRepos, {
-      environment: options.env || 'dev',
+      environment,
       parallel: options.parallel || false,
       watch: options.watch || false,
       fix: options.fix || false

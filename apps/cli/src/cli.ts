@@ -3,6 +3,7 @@ import { Command } from 'commander';
 
 import { AdminCommand } from '@/commands/admin';
 import { AppCommand } from '@/commands/app';
+import { ConfigCommand } from '@/commands/config';
 import { InitCommand } from '@/commands/init';
 import { SetupCommand } from '@/commands/setup/core/setup-command';
 import { TeamCommand } from '@/commands/team';
@@ -73,6 +74,10 @@ ${chalk.cyan('Docker Compose Support:')}
     // Register setup command
     const setupCommand = new SetupCommand();
     this.program.addCommand(setupCommand.getCommand());
+
+    // Register config command
+    const configCommand = new ConfigCommand();
+    this.program.addCommand(configCommand.getCommand());
 
     // Register team command
     const teamCommand = new TeamCommand();

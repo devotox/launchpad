@@ -52,6 +52,7 @@ export async function createDefaultConfig(
     preferences: {
       autoClone: true,
       setupDependencies: true,
+      defaultEnvironment: 'dev',
       preferredEditor: '',
       preferredTerminal: '',
       preferredSlackChannel: '',
@@ -167,6 +168,7 @@ export function migrateConfig(config: unknown): LaunchpadConfig {
     preferences: {
       autoClone: cfg.preferences?.autoClone ?? true,
       setupDependencies: cfg.preferences?.setupDependencies ?? true,
+      defaultEnvironment: cfg.preferences?.defaultEnvironment || 'dev',
       preferredEditor: cfg.preferences?.preferredEditor || '',
       preferredTerminal: cfg.preferences?.preferredTerminal || '',
       preferredSlackChannel: cfg.preferences?.preferredSlackChannel || '',
