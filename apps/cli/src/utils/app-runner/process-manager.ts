@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { createWriteStream, promises as fs } from 'node:fs';
+import { createWriteStream, promises as fs, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { execSync } from 'node:child_process';
 
 import chalk from 'chalk';
 
@@ -65,6 +66,33 @@ export class ProcessManager {
       throw new Error(`Repository '${repo}' not found at ${repoPath}`);
     }
 
+    // --- Node version detection logic ---
+    let requiredNodeVersion: string | undefined;
+    const nvmrcPath = join(repoPath, '.nvmrc');
+    const nodeVersionPath = join(repoPath, '.node-version');
+    const packageJsonPath = join(repoPath, 'package.json');
+    if (existsSync(nvmrcPath)) {
+      requiredNodeVersion = (await fs.readFile(nvmrcPath, 'utf-8')).trim();
+    } else if (existsSync(nodeVersionPath)) {
+      requiredNodeVersion = (await fs.readFile(nodeVersionPath, 'utf-8')).trim();
+    } else if (existsSync(packageJsonPath)) {
+      try {
+        const pkgRaw = await fs.readFile(packageJsonPath, 'utf-8');
+        const pkg: unknown = JSON.parse(pkgRaw);
+        if (typeof pkg === 'object' && pkg !== null && 'engines' in pkg && typeof (pkg as any).engines === 'object' && (pkg as any).engines !== null && 'node' in (pkg as any).engines) {
+          requiredNodeVersion = (pkg as any).engines.node;
+        }
+      } catch {}
+    }
+
+    // Detect available Node version managers
+    let nodeManager: 'nvm' | 'volta' | 'fnm' | undefined;
+    try { execSync('command -v nvm', { stdio: 'ignore', shell: true }); nodeManager = 'nvm'; } catch {}
+    if (!nodeManager) { try { execSync('command -v volta', { stdio: 'ignore', shell: true }); nodeManager = 'volta'; } catch {} }
+    if (!nodeManager) { try { execSync('command -v fnm', { stdio: 'ignore', shell: true }); nodeManager = 'fnm'; } catch {} }
+
+    // --- End Node version detection logic ---
+
     const logFile = join(this.logDir, `${repo}-${command}-${Date.now()}.log`);
 
     console.log(chalk.blue(`📦 ${repo}: ${actualCommand.join(' ')}`));
@@ -78,28 +106,43 @@ export class ProcessManager {
     }
 
     return new Promise((resolve, reject) => {
-      const command = actualCommand[0];
-      if (!command) {
-        reject(new Error('No command specified'));
-        return;
+      let spawnCommand = actualCommand[0] ?? 'node';
+      let spawnArgs = actualCommand.slice(1);
+      const spawnEnv = {
+        ...process.env,
+        NODE_ENV: options.environment,
+        ENVIRONMENT: options.environment,
+        ENV: options.environment
+      };
+
+      // If a required Node version is found and a manager is available, wrap the command
+      if (requiredNodeVersion && nodeManager) {
+        console.log(chalk.cyan(`🔢 Using Node version ${requiredNodeVersion} via ${nodeManager}`));
+        if (nodeManager === 'nvm') {
+          spawnCommand = 'nvm';
+          spawnArgs = ['exec', requiredNodeVersion, ...actualCommand];
+        } else if (nodeManager === 'volta') {
+          spawnCommand = 'volta';
+          spawnArgs = ['run', `--node=${requiredNodeVersion}`, ...actualCommand];
+        } else if (nodeManager === 'fnm') {
+          spawnCommand = 'fnm';
+          spawnArgs = ['exec', requiredNodeVersion, ...actualCommand];
+        }
+      } else if (requiredNodeVersion) {
+        console.log(chalk.yellow(`⚠️  Required Node version ${requiredNodeVersion} detected, but no Node version manager (nvm, volta, fnm) found in PATH. Using current Node version: ${process.version}`));
       }
 
-      const childProcess = spawn(command, actualCommand.slice(1), {
+      const childProcess = spawn(spawnCommand, spawnArgs, {
         cwd: repoPath,
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: true,
-        env: {
-          ...process.env,
-          NODE_ENV: options.environment,
-          ENVIRONMENT: options.environment,
-          ENV: options.environment
-        }
+        env: spawnEnv
       });
 
       const runningProcess: RunningProcess = {
         repo,
         command,
-        pid: childProcess.pid || 0,
+        pid: childProcess?.pid || 0,
         process: childProcess,
         startTime: new Date(),
         logFile,
@@ -169,7 +212,7 @@ export class ProcessManager {
     // For long-running commands, resolve immediately after starting
     if (this.isLongRunningCommand(command, options)) {
       setTimeout(() => {
-        console.log(chalk.green(`🚀 ${repo}: ${command} started (PID: ${childProcess.pid})`));
+        console.log(chalk.green(`🚀 ${repo}: ${command} started (PID: ${childProcess?.pid})`));
         resolve();
       }, 1000);
     }

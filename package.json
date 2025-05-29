@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "@mobily/ts-belt": "3.13.1",
+    "clipboardy": "4.0.0",
     "open": "10.1.2",
     "parse-json": "8.3.0",
     "safe-stable-stringify": "2.5.0",

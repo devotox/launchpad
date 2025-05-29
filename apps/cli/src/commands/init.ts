@@ -7,6 +7,8 @@ import { RepositoryManager } from '@/utils/repository';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import type { RepoDeleteStrategy } from '@/utils/repository';
+import { execSync } from 'node:child_process';
+import { execa } from 'execa';
 
 type InitAnswers = {
   name: string;
@@ -218,6 +220,116 @@ export class InitCommand {
         });
 
         await this.setupGitHubAuthentication();
+      }
+
+      // Step 5.5: SSO Git authorization check (before cloning)
+      if (answers.cloneRepos && answers.team !== 'none') {
+        const dataManager = DataManager.getInstance();
+        const team = await dataManager.getTeamById(answers.team);
+        if (team && team.repositories.length > 0) {
+          // Pick the first required repo, or fallback to the first repo
+          const repo = team.repositories.find(r => r.required) || team.repositories[0];
+          if (repo) {
+            // Use HTTPS URL for SSO check to better trigger browser flow
+            const org = answers.organization || 'loveholidays';
+            const repoUrlForSso = `https://github.com/${org}/${repo.name}.git`;
+            const repoUrl = repo.url.startsWith('git@')
+              ? repo.url
+              : `git@github.com:${org}/${repo.name}.git`;
+            let authorized = false;
+            const { execa } = await import('execa');
+            while (!authorized) {
+              try {
+                console.log(chalk.cyan(`\n🔒 Checking SSO authorization for ${repoUrlForSso} ...`));
+                await execa('git', ['ls-remote', repoUrlForSso]);
+                console.log(chalk.green('✅ SSO authorization complete!'));
+                authorized = true;
+              } catch (error) {
+                let errorMsg = '';
+                if (typeof error === 'object' && error !== null) {
+                  const e = error as { stderr?: string; stdout?: string; message?: string };
+                  errorMsg = e.stderr || e.stdout || e.message || String(error);
+                } else {
+                  errorMsg = String(error);
+                }
+                if (
+                  errorMsg.includes('organization has enabled or enforced SAML SSO') ||
+                  errorMsg.includes('SAML SSO')
+                ) {
+                  const ssoUrl = `https://github.com/orgs/${org}/sso`;
+                  // Try to find a one-time code in the error output (e.g., Username for ...: <code>)
+                  const codeMatch = errorMsg.match(/Username for [^:]+: (\w+)/);
+                  // Note: You must add 'clipboardy' to your dependencies for this to work
+                  if (codeMatch?.[1]) {
+                    const code = codeMatch[1];
+                    try {
+                      // Dynamically import clipboardy, handle if not installed
+                      const clipboardy = await import('clipboardy');
+                      await clipboardy.default.write(code);
+                      // Print a large, clear message
+                      console.log(chalk.bgBlue.white.bold('\n──────────────────────────────────────────────────────────────'));
+                      console.log(chalk.bgBlue.white.bold('  GITHUB SSO ONE-TIME CODE  '));
+                      console.log(chalk.bgBlue.white.bold('──────────────────────────────────────────────────────────────'));
+                      console.log(chalk.bgBlue.white.bold(`\n  Your one-time code is: ${code}\n`));
+                      console.log(chalk.bgBlue.white.bold('  This code has been copied to your clipboard.'));
+                      console.log(chalk.bgBlue.white.bold('  You will be prompted to paste it into the GitHub SSO page.'));
+                      console.log(chalk.bgBlue.white.bold('──────────────────────────────────────────────────────────────\n'));
+                      await new Promise(res => setTimeout(res, 3000));
+                    } catch (clipErr) {
+                      console.log(chalk.yellow('Could not copy code to clipboard automatically.'));
+                    }
+                    // If possible, try to open the SSO page with the code as a query param (if supported)
+                    // (GitHub does not currently support this, but if it ever does, this is where to add it)
+                  }
+                  console.log(chalk.yellow('\n🔗 SSO authorization required. Opening your organization SSO page in your browser:'));
+                  console.log(chalk.blueBright(ssoUrl));
+                  try {
+                    if (process.platform === 'darwin') execSync(`open "${ssoUrl}"`);
+                    else if (process.platform === 'linux') execSync(`xdg-open "${ssoUrl}"`);
+                    else if (process.platform === 'win32') execSync(`start "" "${ssoUrl}"`);
+                  } catch (openErr) {
+                    console.log(chalk.yellow('Could not open browser automatically. Please open the URL above manually.'));
+                  }
+                  console.log(chalk.cyan('Waiting for SSO authorization (will check automatically for up to 30 seconds)...'));
+                  let autoAuthorized = false;
+                  for (let i = 0; i < 30; i++) {
+                    try {
+                      await new Promise(res => setTimeout(res, 1000));
+                      await execa('git', ['ls-remote', repoUrl]);
+                      console.log(chalk.green('✅ SSO authorization complete!'));
+                      autoAuthorized = true;
+                      authorized = true;
+                      break;
+                    } catch (autoErr) {
+                      // keep retrying
+                    }
+                  }
+                  if (!autoAuthorized) {
+                    console.log(chalk.yellow('Still waiting for SSO authorization...'));
+                    console.log(chalk.cyan('Please authorize your SSH key or token for SSO, then press enter to retry.'));
+                    await inquirer.prompt([
+                      {
+                        type: 'input',
+                        name: 'continue',
+                        message: 'Press enter after you have completed SSO authorization.',
+                      }
+                    ]);
+                  }
+                } else {
+                  console.log(chalk.red('\n❌ SSO authorization failed or not complete.'));
+                  console.log(chalk.gray('This should open a browser window to authorize your organization.'));
+                  await inquirer.prompt([
+                    {
+                      type: 'input',
+                      name: 'continue',
+                      message: 'Press enter to retry SSO authorization check.',
+                    }
+                  ]);
+                }
+              }
+            }
+          }
+        }
       }
 
       // Step 6: Repository cloning
@@ -716,6 +828,7 @@ export class InitCommand {
     console.log(
       chalk.cyan("💡 Tip: Use 'launchpad team --help' to explore team-specific commands")
     );
+    console.log(chalk.cyan("💡 Tip: Use 'launchpad app dev' to start the one or all applications for your team."));
   }
 
   private async saveCheckpoint(checkpoint: InitCheckpoint): Promise<void> {
@@ -863,23 +976,6 @@ export class InitCommand {
         execSync('gh auth status', { stdio: 'pipe' });
         console.log(chalk.green('✅ Already authenticated with GitHub!'));
 
-        // Check SSO status
-        console.log(chalk.cyan('\n🔒 Checking SAML SSO Authentication...'));
-        console.log(chalk.gray('Some organizations use SAML SSO for GitHub access.'));
-
-        const { ssoSetup } = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'ssoSetup',
-            message: 'Do you need help setting up SAML SSO authentication?',
-            default: true
-          }
-        ]);
-
-        if (ssoSetup) {
-          await this.guideSSOSetup();
-        }
-
         return;
       } catch {
         // Not authenticated, proceed with auth flow
@@ -914,9 +1010,6 @@ export class InitCommand {
       try {
         execSync('gh auth status', { stdio: 'pipe' });
         console.log(chalk.green('✅ Successfully authenticated with GitHub!'));
-
-        // Guide through SSO setup
-        await this.guideSSOSetup();
       } catch {
         console.log(chalk.red('❌ GitHub authentication failed.'));
         console.log(chalk.gray('You can retry later with: gh auth login'));
@@ -925,64 +1018,6 @@ export class InitCommand {
       console.error(chalk.red(`❌ Error setting up GitHub authentication: ${error}`));
       console.log(chalk.gray('You can set this up manually later with: gh auth login'));
     }
-  }
-
-  private async guideSSOSetup(): Promise<void> {
-    console.log(chalk.cyan('\n🔒 SAML SSO Setup'));
-    console.log(chalk.gray('─'.repeat(30)));
-
-    console.log(chalk.yellow('⚠️  Some organizations use SAML SSO for GitHub access.'));
-    console.log(chalk.gray('You may need to authorize your authentication for SSO access.'));
-
-    console.log(chalk.white('\n📋 SSO Setup Steps:'));
-    console.log(chalk.gray('1. Go to: https://github.com/settings/tokens'));
-    console.log(chalk.gray('2. Find your personal access token'));
-    console.log(chalk.gray('3. Click "Configure SSO" next to the token'));
-    console.log(chalk.gray('4. Authorize the organization(s) you need access to'));
-    console.log(chalk.gray('5. For SSH keys, visit: https://github.com/settings/keys'));
-    console.log(chalk.gray('6. Click "Configure SSO" for each SSH key'));
-
-    console.log(chalk.white('\n🔗 Helpful Links:'));
-    console.log(chalk.blue('• Personal Access Tokens: https://github.com/settings/tokens'));
-    console.log(chalk.blue('• SSH Keys: https://github.com/settings/keys'));
-    console.log(
-      chalk.blue(
-        '• SSO Documentation: https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-saml-single-sign-on'
-      )
-    );
-
-    const { openBrowser } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'openBrowser',
-        message: 'Would you like to open the GitHub settings page now?',
-        default: true
-      }
-    ]);
-
-    if (openBrowser) {
-      try {
-        const { execSync } = await import('node:child_process');
-        const { platform } = process;
-
-        if (platform === 'darwin') {
-          execSync('open https://github.com/settings/tokens');
-        } else if (platform === 'linux') {
-          execSync('xdg-open https://github.com/settings/tokens');
-        } else if (platform === 'win32') {
-          execSync('start https://github.com/settings/tokens');
-        }
-
-        console.log(chalk.green('🌐 Opened GitHub settings in your browser.'));
-      } catch {
-        console.log(chalk.yellow('Could not open browser automatically.'));
-        console.log(chalk.gray('Please visit: https://github.com/settings/tokens'));
-      }
-    }
-
-    console.log(chalk.cyan('\n💡 After SSO setup, test repository access with:'));
-    console.log(chalk.gray('   gh repo list [organization-name]'));
-    console.log(chalk.gray('   gh repo clone [organization]/[repo-name]'));
   }
 
   private async downloadInitialConfig(): Promise<void> {
