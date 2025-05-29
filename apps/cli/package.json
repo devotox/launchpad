@@ -33,6 +33,7 @@
     "inquirer": "12.6.2",
     "parse-json": "8.3.0",
     "safe-stable-stringify": "2.5.0",
+    "trash": "9.0.0",
     "ts-pattern": "5.7.1",
     "zx": "8.5.4"
   },
@@ -40,6 +41,7 @@
     "@types/fs-extra": "11.0.4",
     "@types/inquirer": "9.0.8",
     "@types/node": "22.15.21",
+    "@types/trash": "5.0.1",
     "tsup": "8.5.0",
     "tsx": "4.19.4",
     "vitest": "2.1.8"

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import open from 'open';
 
 import { BackupHandler } from './backup-handler';
 import { ProviderHandler } from './provider-handler';
@@ -127,6 +128,22 @@ export class ConfigCommand {
       .description('Manage sync providers')
       .action(async () => {
         await this.providerHandler.manageSyncProviders();
+      });
+
+    configCmd
+      .command('token:create')
+      .description('Open the GitHub token creation page with recommended permissions')
+      .action(async () => {
+        const url = 'https://github.com/settings/tokens/new?scopes=repo,gist&description=Launchpad%20CLI%20Sync%20Token';
+        console.log('\nTo use Launchpad CLI sync features, you need a GitHub personal access token with:');
+        console.log('  - repo (for repository sync)');
+        console.log('  - gist (for Gist sync)');
+        console.log('\nOpening the GitHub token creation page in your browser...');
+        await open(url);
+        console.log('\nAfter creating your token, use it with:');
+        console.log('  launchpad admin config upload --token <your-token>');
+        console.log('  or');
+        console.log('  launchpad admin config download --token <your-token>');
       });
 
     return configCmd;

@@ -5,12 +5,19 @@
 // Core Data Types (formerly from data.ts)
 // ============================================================================
 
+export type DevCommand = {
+  type: string; // e.g. 'local', 'staging', 'custom', etc.
+  label?: string; // Optional label for UI
+  command: string | string[];
+};
+
 export type Repository = {
   name: string;
   url: string;
   description: string;
   required: boolean;
   type: 'frontend' | 'backend' | 'mobile' | 'infrastructure' | 'shared';
+  devCommand?: string[] | DevCommand[];
 };
 
 export type SlackChannels = {

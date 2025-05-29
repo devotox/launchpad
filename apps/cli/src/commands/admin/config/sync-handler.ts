@@ -278,6 +278,15 @@ export class SyncHandler {
           path: configToUse.path,
           message: configToUse.message
         });
+
+        // Always save the token if provided
+        await this.configManager.setSyncProvider('github', {
+          repository: configToUse.repository,
+          branch: configToUse.branch || 'main',
+          token: configToUse.token,
+          path: configToUse.path || 'launchpad-config.json',
+        });
+        console.log(chalk.cyan('🔑 Saved GitHub token to sync configuration'));
       } else if (providerToUse === 'gist') {
         if (!configToUse.token) {
           console.log(chalk.red('❌ GitHub token is required for Gist uploads'));
@@ -325,6 +334,16 @@ export class SyncHandler {
             token: configToUse.token,
             description: configToUse.description || 'Launchpad configuration'
           });
+        } else if (configToUse.token) {
+          // Always save the token if provided
+          const currentGistConfig = await this.configManager.getSyncProvider('gist');
+          if (currentGistConfig && typeof currentGistConfig === 'object' && 'gistId' in currentGistConfig && 'fileName' in currentGistConfig) {
+            await this.configManager.setSyncProvider('gist', {
+              ...currentGistConfig,
+              token: configToUse.token
+            });
+            console.log(chalk.cyan('🔑 Saved Gist token to sync configuration'));
+          }
         }
       } else if (providerToUse === 'local') {
         if (!configToUse.localPath) {

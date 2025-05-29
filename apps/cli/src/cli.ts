@@ -7,6 +7,7 @@ import { ConfigCommand } from '@/commands/config';
 import { InitCommand } from '@/commands/init';
 import { SetupCommand } from '@/commands/setup/core/setup-command';
 import { TeamCommand } from '@/commands/team';
+import { RepoCommand } from '@/commands/repo';
 
 export class LaunchpadCLI {
   private program: Command;
@@ -86,6 +87,10 @@ ${chalk.cyan('Docker Compose Support:')}
     // Register app command
     const appCommand = new AppCommand();
     this.program.addCommand(appCommand.getCommand());
+
+    // Register repo command
+    const repoCommand = new RepoCommand();
+    this.program.addCommand(repoCommand.getCommand());
 
     // Register admin command
     const adminCommand = new AdminCommand();

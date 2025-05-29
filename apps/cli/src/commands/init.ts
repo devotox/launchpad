@@ -6,6 +6,7 @@ import { DataManager } from '@/utils/config/data-manager';
 import { RepositoryManager } from '@/utils/repository';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
+import type { RepoDeleteStrategy } from '@/utils/repository';
 
 type InitAnswers = {
   name: string;
@@ -57,12 +58,13 @@ export class InitCommand {
       .option('--overwrite', 'Overwrite existing repositories without prompting')
       .option('--resume', 'Resume from last checkpoint if available')
       .option('--clean', 'Remove any existing checkpoint and start fresh')
+      .option('--delete-strategy <strategy>', 'Repository delete strategy: tmp (fast, not recoverable) or trash (recoverable)', 'tmp')
       .action(async (options) => {
-        await this.execute(options.force, options.resume, options.clean, options.overwrite);
+        await this.execute(options.force, options.resume, options.clean, options.overwrite, options.deleteStrategy);
       });
   }
 
-  async execute(force = false, resume = false, clean = false, overwrite = false): Promise<void> {
+  async execute(force = false, resume = false, clean = false, overwrite = false, deleteStrategy: RepoDeleteStrategy = 'tmp'): Promise<void> {
     const configManager = ConfigManager.getInstance();
     const dataManager = DataManager.getInstance();
 
@@ -113,10 +115,10 @@ export class InitCommand {
     console.log(chalk.gray("Let's set up your developer workspace...\n"));
 
     // Start fresh initialization
-    await this.runFullInitialization(force, overwrite);
+    await this.runFullInitialization(force, overwrite, deleteStrategy);
   }
 
-  private async runFullInitialization(force = false, overwrite = false): Promise<void> {
+  private async runFullInitialization(force = false, overwrite = false, deleteStrategy: RepoDeleteStrategy = 'tmp'): Promise<void> {
     try {
       // Step 1: Essential tools check
       await this.saveCheckpoint({
@@ -230,7 +232,7 @@ export class InitCommand {
           overwrite
         });
 
-        await this.handleRepositoryCloning(answers, overwrite);
+        await this.handleRepositoryCloning(answers, overwrite, deleteStrategy);
       }
 
       // Step 7: Completion
@@ -557,7 +559,7 @@ export class InitCommand {
     }
   }
 
-  private async handleRepositoryCloning(answers: InitAnswers, overwrite = false): Promise<void> {
+  private async handleRepositoryCloning(answers: InitAnswers, overwrite = false, deleteStrategy: RepoDeleteStrategy = 'tmp'): Promise<void> {
     const configManager = ConfigManager.getInstance();
     const dataManager = DataManager.getInstance();
 
@@ -581,34 +583,55 @@ export class InitCommand {
     // Determine cloning options
     const cloneOptions = {
       overwrite,
-      interactive: !overwrite // Only prompt if overwrite flag is not set
+      interactive: !overwrite, // Only prompt if overwrite flag is not set
+      deleteStrategy
     };
 
     try {
-      // Always pass organization since it's now always collected
+      // Clone repositories (required or all)
+      const reposToClone = onlyRequired ? team.repositories.filter(r => r.required) : team.repositories;
       const clonedRepos = await repoManager.cloneRepositories(
-        team.repositories,
-        onlyRequired,
-        answers.organization,
+        reposToClone,
+        false, // onlyRequired is handled above
+        undefined,
         cloneOptions
       );
 
-      // Update config with cloned repositories
+      // Update config with cloned repositories (add new ones if not present)
+      const config = await configManager.getConfig();
+      if (!config) {
+        console.log(chalk.red('❌ No configuration found. Cannot update repositories.'));
+        return;
+      }
+      const updatedRepoNames = Array.from(new Set([
+        ...(config.workspace.repositories || []),
+        ...clonedRepos,
+      ]));
       await configManager.updateConfig({
         workspace: {
-          name: answers.workspaceName,
-          path: answers.workspacePath,
-          repositories: clonedRepos
-        }
+          ...config.workspace,
+          repositories: updatedRepoNames,
+        },
       });
-
-      // Setup dependencies if requested
-      if (answers.setupDependencies && clonedRepos.length > 0) {
-        await repoManager.setupRepositories(clonedRepos);
-      }
 
       if (clonedRepos.length > 0) {
         console.log(chalk.green(`\n✅ Successfully set up ${clonedRepos.length} repositories!`));
+        // Install dependencies if requested, or prompt if not set
+        if (answers.setupDependencies) {
+          await repoManager.setupRepositories(clonedRepos);
+        } else {
+          const { shouldInstall } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'shouldInstall',
+              message: 'Do you want to install dependencies for the cloned repositories?',
+              default: true,
+            },
+          ]);
+          if (shouldInstall) {
+            await repoManager.setupRepositories(clonedRepos);
+          }
+        }
       } else {
         console.log(chalk.yellow('\n⚠️  No repositories were cloned.'));
         console.log(chalk.red('🚫 Repository cloning was blocked due to SAML SSO authentication issues.'));

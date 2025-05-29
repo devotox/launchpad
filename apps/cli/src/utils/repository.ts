@@ -6,6 +6,33 @@ import { execa } from 'execa';
 import { match } from 'ts-pattern';
 import type { Repository } from '@/utils/config/types';
 import { PackageManagerDetector } from './package-manager';
+import fsExtra from 'fs-extra';
+import trash from 'trash';
+import { tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
+
+export type RepoDeleteStrategy = 'tmp' | 'trash';
+
+async function deleteRepositoryFolder(
+  repoPath: string,
+  repoName: string,
+  strategy: RepoDeleteStrategy = 'tmp'
+): Promise<void> {
+  if (strategy === 'trash') {
+    // Move to system trash (recoverable)
+    await trash([repoPath]);
+  } else {
+    // Move to /tmp and delete in background (fast, not recoverable)
+    const tmpPath = join(tmpdir(), `launchpad-trash-${Date.now()}-${repoName}`);
+    await fsExtra.move(repoPath, tmpPath, { overwrite: true });
+    // Delete in background
+    const rm = spawn('rm', ['-rf', tmpPath], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    rm.unref();
+  }
+}
 
 export class RepositoryManager {
   private hasOpenedAuthPage = false; // Track if we've already opened a browser window
@@ -41,7 +68,7 @@ export class RepositoryManager {
 
   async cloneRepository(
     repo: Repository,
-    options: { overwrite?: boolean; interactive?: boolean } = {}
+    options: { overwrite?: boolean; interactive?: boolean; deleteStrategy?: RepoDeleteStrategy } = {}
   ): Promise<{ success: boolean; authIssue?: 'saml' | 'login' | 'token' | null; skipped?: boolean }> {
     const repoPath = join(this.workspacePath, repo.name);
 
@@ -51,7 +78,7 @@ export class RepositoryManager {
 
       if (options.overwrite) {
         console.log(chalk.yellow(`⚠️  Repository ${repo.name} already exists, removing...`));
-        await fs.rm(repoPath, { recursive: true, force: true });
+        await deleteRepositoryFolder(repoPath, repo.name, options.deleteStrategy);
       } else if (options.interactive) {
         console.log(chalk.yellow(`⚠️  Repository ${repo.name} already exists.`));
 
@@ -70,7 +97,7 @@ export class RepositoryManager {
 
         if (answer === 'y' || answer === 'yes') {
           console.log(chalk.blue(`🗑️  Removing existing ${repo.name}...`));
-          await fs.rm(repoPath, { recursive: true, force: true });
+          await deleteRepositoryFolder(repoPath, repo.name, options.deleteStrategy);
         } else {
           console.log(chalk.gray(`   Skipping ${repo.name}`));
           return { success: true, skipped: true };

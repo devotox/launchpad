@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 
 import { ConfigManager } from '@/utils/config/manager';
+import { DataManager } from '@/utils/config/data-manager';
 
 import { CommandResolver } from './command-resolver';
 import { DockerDetector } from './docker-detector';
@@ -9,6 +10,9 @@ import { ProcessManager } from './process-manager';
 import { RepositoryManager } from './repository-manager';
 
 import type { RunOptions, RunningProcess } from './types';
+import type { Repository, Team, DevCommand } from '@/utils/config/types';
+
+// Supports custom devCommand per repository (see teams.json) for running custom dev scripts in sequence.
 
 export class AppRunner {
   private workspacePath: string;
@@ -80,6 +84,149 @@ export class AppRunner {
     options: RunOptions
   ): Promise<void> {
     const repoPath = join(this.workspacePath, repo);
+    // Fetch the full Team object for the current user
+    const configManager = ConfigManager.getInstance();
+    const userInfo = await configManager.getUserInfo();
+    let repoObj: Repository | undefined = undefined;
+    if (userInfo) {
+      const dataManager = DataManager.getInstance();
+      const team: Team | undefined = await dataManager.getTeamById(userInfo.team);
+      if (team && Array.isArray(team.repositories)) {
+        repoObj = team.repositories.find((r) => r.name === repo);
+      }
+    }
+    // Check for a custom command array or string for this command (e.g., devCommand, buildCommand, etc)
+    const customCommandKey = `${command}Command` as keyof Repository;
+    let customCommands: string[] | DevCommand[] | undefined;
+    if (repoObj && typeof repoObj[customCommandKey] === 'string') {
+      customCommands = [repoObj[customCommandKey] as string];
+    } else if (repoObj && Array.isArray(repoObj[customCommandKey])) {
+      // Filter out undefined/null
+      customCommands = (repoObj[customCommandKey] as (string | DevCommand | undefined)[]).filter(Boolean) as string[] | DevCommand[];
+    }
+    // Support new DevCommand[] structure for 'dev' command
+    if (
+      command === 'dev' &&
+      Array.isArray(customCommands) &&
+      customCommands.length > 0 &&
+      typeof customCommands[0] === 'object' &&
+      customCommands[0] !== undefined &&
+      'command' in customCommands[0]
+    ) {
+      // Interactive selection if more than one
+      const devCommands = (customCommands as unknown[]).filter((c): c is DevCommand => !!c && typeof c === 'object' && 'command' in c);
+      if (!devCommands.length) {
+        throw new Error('No valid dev commands found for this repository.');
+      }
+      let selected: DevCommand;
+      if (devCommands.length === 1) {
+        if (!devCommands[0]) throw new Error('No valid dev commands found for this repository.');
+        selected = devCommands[0];
+      } else {
+        const inquirer = (await import('inquirer')).default;
+        const { chosen } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'chosen',
+            message: `Select dev command for ${repo}:`,
+            choices: devCommands.map((cmd, idx) => ({
+              name: `${cmd.type}${cmd.label ? ` - ${cmd.label}` : ''}: ${Array.isArray(cmd.command) ? cmd.command.join(' ') : cmd.command}`,
+              value: idx
+            }))
+          }
+        ]);
+        const idx = typeof chosen === 'number' && chosen >= 0 && chosen < devCommands.length ? chosen : 0;
+        if (!devCommands[idx]) throw new Error('No valid dev commands found for this repository.');
+        selected = devCommands[idx];
+      }
+      // Run the selected dev command
+      let actualCommand: string[];
+      const knownManagers = ['pnpm', 'npm', 'yarn', 'bun'];
+      if (Array.isArray(selected.command)) {
+        const first = selected.command[0] ?? '';
+        if (typeof first === 'string' && knownManagers.includes(first)) {
+          actualCommand = selected.command as string[];
+        } else {
+          actualCommand = await this.commandResolver.resolveCommand((selected.command as string[]).join(' '), options, { isDockerCompose: false }, repoPath);
+        }
+      } else if (typeof selected.command === 'string') {
+        const splitCmd = selected.command.trim().split(/\s+/);
+        const first = splitCmd[0] ?? '';
+        if (typeof first === 'string' && knownManagers.includes(first)) {
+          actualCommand = splitCmd;
+        } else {
+          actualCommand = await this.commandResolver.resolveCommand(selected.command, options, { isDockerCompose: false }, repoPath);
+        }
+      } else {
+        actualCommand = await this.commandResolver.resolveCommand(String(selected.command), options, { isDockerCompose: false }, repoPath);
+      }
+      let commandStr = '';
+      if (Array.isArray(selected.command) && selected.command.every((c) => typeof c === 'string')) {
+        commandStr = (selected.command as string[]).join(' ');
+      } else if (typeof selected.command === 'string') {
+        commandStr = selected.command;
+      } else {
+        commandStr = '';
+      }
+      await this.processManager.runSingleCommand({
+        actualCommand,
+        repo,
+        repoPath,
+        command: commandStr,
+        options,
+        dockerInfo: { isDockerCompose: false },
+        npmDockerInfo: { usesDocker: false, dockerCommand: '', services: [] }
+      });
+      return;
+    }
+    if (customCommands && customCommands.length > 0) {
+      for (const customCmdRaw of customCommands) {
+        // Only handle string[] or string legacy commands here
+        if (typeof customCmdRaw === 'string') {
+          // string
+          const customCmd = customCmdRaw;
+          const knownManagers = ['pnpm', 'npm', 'yarn', 'bun'];
+          let actualCommand: string[];
+          const splitCmd = customCmd.trim().split(/\s+/);
+          const first = splitCmd[0] ?? '';
+          if (typeof first === 'string' && knownManagers.includes(first)) {
+            actualCommand = splitCmd;
+          } else {
+            actualCommand = await this.commandResolver.resolveCommand(customCmd, options, { isDockerCompose: false }, repoPath);
+          }
+          await this.processManager.runSingleCommand({
+            actualCommand,
+            repo,
+            repoPath,
+            command: customCmd,
+            options,
+            dockerInfo: { isDockerCompose: false },
+            npmDockerInfo: { usesDocker: false, dockerCommand: '', services: [] }
+          });
+        } else if (Array.isArray(customCmdRaw) && customCmdRaw.every((c) => typeof c === 'string')) {
+          // string[]
+          const customCmd = customCmdRaw as string[];
+          const knownManagers = ['pnpm', 'npm', 'yarn', 'bun'];
+          let actualCommand: string[];
+          const first = customCmd[0] ?? '';
+          if (typeof first === 'string' && knownManagers.includes(first)) {
+            actualCommand = customCmd;
+          } else {
+            actualCommand = await this.commandResolver.resolveCommand(customCmd.join(' '), options, { isDockerCompose: false }, repoPath);
+          }
+          await this.processManager.runSingleCommand({
+            actualCommand,
+            repo,
+            repoPath,
+            command: customCmd.join(' '),
+            options,
+            dockerInfo: { isDockerCompose: false },
+            npmDockerInfo: { usesDocker: false, dockerCommand: '', services: [] }
+          });
+        }
+      }
+      return;
+    }
 
     // Detect Docker Compose usage
     const dockerInfo = await this.dockerDetector.detectDockerCompose(repoPath);
