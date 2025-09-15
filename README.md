@@ -1,21 +1,21 @@
 ---
 title: "Launchpad CLI"
-description: "The essential developer onboarding tool for LoveHolidays - your starting point into the organization and beyond"
+description: "The essential developer onboarding tool for any organization - your starting point into the organization and beyond"
 ---
 
 ![Launchpad CLI Cover Image](mdc:img/company/cover.png)
 
 # Launchpad CLI
 
-Welcome to **Launchpad** - the comprehensive command-line interface designed to be every developer's starting point into the LoveHolidays organization and beyond.
+Welcome to **Launchpad** - the comprehensive command-line interface designed to be every developer's starting point into the any organization organization and beyond.
 
 ## What is Launchpad?
 
-Launchpad CLI is the essential onboarding tool that streamlines the developer experience at LoveHolidays. Whether you're a new team member joining the organization or an existing developer exploring new projects, Launchpad provides you with the tools, resources, and guidance needed to get up and running quickly.
+Launchpad CLI is the essential onboarding tool that streamlines the developer experience at any organization. Whether you're a new team member joining the organization or an existing developer exploring new projects, Launchpad provides you with the tools, resources, and guidance needed to get up and running quickly.
 
-Launchpad is more than just a CLI tool - it's your gateway to the LoveHolidays developer ecosystem. It serves as:
+Launchpad is more than just a CLI tool - it's your gateway to the any organization developer ecosystem. It serves as:
 
-- **Your First Step**: The initial tool every developer uses when joining LoveHolidays
+- **Your First Step**: The initial tool every developer uses when joining any organization
 - **Project Bootstrap**: Quick setup and initialization of new projects
 - **Resource Hub**: Access to documentation, best practices, and organizational standards
 - **Development Environment**: Streamlined setup of local development environments
@@ -23,7 +23,7 @@ Launchpad is more than just a CLI tool - it's your gateway to the LoveHolidays d
 
 ## Why Choose Launchpad?
 
-At LoveHolidays, we believe that great developer experiences lead to great products. Launchpad embodies this philosophy by:
+At any organization, we believe that great developer experiences lead to great products. Launchpad embodies this philosophy by:
 
 - **Reducing Time to Productivity**: Get new developers contributing to projects faster
 - **Ensuring Consistency**: Standardized setup processes across all teams using pnpm and Turbo
@@ -46,7 +46,7 @@ At LoveHolidays, we believe that great developer experiences lead to great produ
 ### 🛠️ Project Management
 - Project creation and scaffolding
 - Template selection and customization
-- Integration with existing LoveHolidays infrastructure
+- Integration with existing any organization infrastructure
 - Automated CI/CD setup
 - Turbo repo integration for monorepo projects
 
@@ -72,7 +72,7 @@ This will build the CLI and install it globally so you can use the `launchpad` c
 ### For Published Package (Future)
 ```bash
 # Installation using pnpm (our preferred package manager)
-pnpm install -g @loveholidays/launchpad-cli
+pnpm install -g @any organization/launchpad-cli
 ```
 
 ## Quick Start
@@ -272,7 +272,7 @@ For detailed documentation, see [APP_COMMANDS.md](./docs/APP_COMMANDS.md).
 
 ## Development Environment Setup
 
-Launchpad automates the installation of all development tools you need for LoveHolidays.
+Launchpad automates the installation of all development tools you need for any organization.
 
 ```bash
 # Set up everything you need
